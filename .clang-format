@@ -1,0 +1,27 @@
+BasedOnStyle: Microsoft
+
+# IndentWidth: 4
+
+# Keep return type and function name on the same line
+# AlwaysBreakAfterReturnType: None
+# AlwaysBreakAfterDefinitionReturnType: None
+
+# Add a space before brace-initialization lists
+SpaceBeforeCpp11BracedList: true
+SpacesInBracedInitList: true
+Cpp11BracedListStyle: false
+
+# Keep all parameters on the same line
+# BinPackParameters: true
+# AllowAllParametersOfDeclarationOnNextLine: false
+# PenaltyBreakBeforeFirstCallParameter: 0
+
+# Prevent breaking braced-init lists
+BreakBeforeBracedInitList: False
+BreakAfterBracedInitList: False
+ColumnLimit: 0
+AllowShortBracedListsOnASingleLine: true
+AllowShortBlocksOnASingleLine: true
+
+PointerAlignment: Left
+
