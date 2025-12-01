@@ -170,4 +170,60 @@ protected:
   ConditionalOStream pcout;
 };
 
+// Equation Data
+
+// Inizial condition u0
+template <int dim>
+class InitialU : public Function<dim>
+{
+  public:
+    virtual double value(const Point<dim>& p,
+                         const unsigned int /*component*/ = 0) const override
+    {
+        const double x = p[0] - 0.5;
+        const double y = p[1] - 0.5;
+        const double r2 = x * x + y * y;
+        return std::exp(-50.0 * r2);
+    }
+};
+
+// Initial condition v0
+template <int dim>
+class InitialV : public Function<dim>
+{
+  public:
+    virtual double value(const Point<dim>& /*p*/,
+                         const unsigned int /*component*/ = 0) const override
+    {
+        return 0.0;
+    }
+};
+
+// Wave speed function
+template <int dim>
+class WaveSpeed : public Function<dim>
+{
+  public:
+    virtual double value(const Point<dim>& /*p*/,
+                         const unsigned int /*component*/ = 0) const override
+    {
+        return 1.0;
+    }
+};
+
+// Right hand side forcing term 
+template <int dim>
+class ForcingTerm : public Function<dim>
+{
+  public:
+    virtual double value(const Point<dim>& /*p*/,
+                         const unsigned int /*component*/ = 0) const override
+    {
+        return 0.0;
+    }
+};
+
+
+
+
 #endif
