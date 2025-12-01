@@ -19,7 +19,7 @@ Cpp11BracedListStyle: false
 # Prevent breaking braced-init lists
 BreakBeforeBracedInitList: False
 BreakAfterBracedInitList: False
-ColumnLimit: 0
+ColumnLimit: 80
 AllowShortBracedListsOnASingleLine: true
 AllowShortBlocksOnASingleLine: true
 
