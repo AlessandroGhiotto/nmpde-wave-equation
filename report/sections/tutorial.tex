@@ -1,0 +1,86 @@
+%!TeX root = ../report.tex
+\section{Figures, Tables and Algorithms}
+
+Figures, Tables and Algorithms have to contain a Caption that describes their content, and have to be properly referred in the text.
+
+\subsection{Figures}
+\label{subsec:figures}
+
+For including pictures in your text you can use \texttt{TikZ} for high-quality hand-made figures \cite{tikz},
+or just include them with the command
+\begin{verbatim}
+\includegraphics[options]{filename.xxx}
+\end{verbatim}
+Here xxx is the correct format, e.g.  \verb|.png|, \verb|.jpg|, \verb|.eps|, \dots.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{images/logo_polimi_scritta.eps}
+    \caption{Caption of the Figure.}
+    \label{fig:quadtree}
+\end{figure}
+
+Thanks to the \texttt{\textbackslash subfloat} command, a single figure, such as Figure~\ref{fig:quadtree},
+can contain multiple sub-figures with their own caption and label, e.g. Figure~\ref{fig:polimi_logo1} and Figure~\ref{fig:polimi_logo2}. 
+
+\begin{figure}[H]
+    \centering
+    \subfloat[One PoliMi logo.\label{fig:polimi_logo1}]{
+        \includegraphics[scale=0.5]{images/logo_polimi_scritta.eps}
+    }
+    \quad
+    \subfloat[Another one PoliMi logo.\label{fig:polimi_logo2}]{
+        \includegraphics[scale=0.5]{images/logo_polimi_scritta2.eps}
+    }
+    \caption[]{Caption of the Figure.}
+    \label{fig:quadtree2}
+\end{figure}
+
+\subsection{Tables}
+\label{subsec:tables}
+
+You can also consider to highlight selected columns or rows in order to make tables more readable.
+Moreover, with the use of \texttt{table*} and the option \texttt{bp} it is possible to align them at the bottom of the page. One example is presented in Table~\ref{table:exampleC}. 
+
+\begin{table*}[bp]
+\centering 
+    \begin{tabular}{|p{3em} | c | c | c | c | c | c|}
+    \hline
+%    \rowcolor{bluePoli!40}
+     & \textbf{column1} & \textbf{column2} & \textbf{column3} & \textbf{column4} & \textbf{column5} & \textbf{column6} \T\B \\
+    \hline \hline
+    \textbf{row1} & 1 & 2 & 3 & 4 & 5 & 6 \T\B\\
+    \textbf{row2} & a & b & c & d & e & f \T\B\\
+    \textbf{row3} & $\alpha$ & $\beta$ & $\gamma$ & $\delta$ & $\phi$ & $\omega$ \T\B\\
+    \textbf{row4} & alpha & beta & gamma & delta & phi & omega \B\\
+    \hline
+    \end{tabular}
+    \\[10pt]
+    \caption{Highlighting the columns}
+    \label{table:exampleC}
+\end{table*}
+
+\subsection{Algorithms}
+\label{subsec:algorithms}
+
+Pseudo-algorithms can be written in \LaTeX{} with the \texttt{algorithm} and \texttt{algorithmic} packages.
+An example is shown in Algorithm~\ref{alg:var}.
+\begin{algorithm}[H]
+\label{alg:example}
+\caption{Name of the Algorithm}
+\label{alg:var}
+\label{protocol1}
+\begin{algorithmic}[1]
+\STATE Initial instructions
+\FOR{$for-condition$}
+\STATE{Some instructions}
+\IF{$if-condition$}
+\STATE{Some other instructions}
+\ENDIF
+\ENDFOR
+\WHILE{$while-condition$}
+\STATE{Some further instructions}
+\ENDWHILE
+\STATE Final instructions
+\end{algorithmic}
+\end{algorithm} 
