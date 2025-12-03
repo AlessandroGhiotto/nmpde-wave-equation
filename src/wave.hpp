@@ -35,8 +35,8 @@
 using namespace dealii;
 
 // Forward declaration so Wave can use DirichletCondition<dim>
-template <int dim>
-class DirichletCondition;
+// template <int dim>
+// class DirichletCondition;
 
 /**
  * Class managing the differential problem.
