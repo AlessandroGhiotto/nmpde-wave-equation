@@ -79,10 +79,10 @@ void Wave::setup()
         sparsity.compress();
 
         pcout << "  Initializing matrices" << std::endl;
-        mass_matrix.reinit(sparsity); // M
-        stiffness_matrix.reinit(sparsity); //K (A)
-        matrix_u.reinit(sparsity);  // M + (Deltat*Theta)^2 * c^2 * K
-        matrix_v.reinit(sparsity);  // M
+        mass_matrix.reinit(sparsity);      // M
+        stiffness_matrix.reinit(sparsity); // K (A)
+        matrix_u.reinit(sparsity);         // M + (Deltat*Theta)^2 * c^2 * K
+        matrix_v.reinit(sparsity);         // M
 
         pcout << "  Initializing vectors" << std::endl;
         solution_u.reinit(locally_owned_dofs, MPI_COMM_WORLD);
@@ -95,7 +95,7 @@ void Wave::setup()
     }
 }
 
-// Assembling mass and stiffness matrices 
+// Assembling mass and stiffness matrices
 
 void Wave::assemble_matrices()
 {
@@ -157,7 +157,7 @@ void Wave::assemble_matrices()
 
     // Matrix for u linear system
     matrix_u.copy_from(mass_matrix);
-    matrix_u.add((theta*delta_t)*(theta*delta_t), stiffness_matrix); // M + (θ Δt)^2 K
+    matrix_u.add((theta * delta_t) * (theta * delta_t), stiffness_matrix); // M + (θ Δt)^2 K
 
     // Matrix for v linear system
     matrix_v.copy_from(mass_matrix);
@@ -172,27 +172,25 @@ void Wave::assemble_rhs_u()
 
     // RHS = M * u^n + dt * M * v^n - dt * (1-theta) * dt * K * u^
 
-     // system_rhs = M * u^n
+    // system_rhs = M * u^n
     mass_matrix.vmult(system_rhs, old_solution_u);
 
     // - k^2 * theta * (1-theta) * A * U^{n-1}
     TrilinosWrappers::MPI::Vector tmp(old_solution_u);
     stiffness_matrix.vmult(tmp, old_solution_u); // K * u^n
-    system_rhs.add(-delta_t*delta_t*theta*(1-theta), tmp);
-
+    system_rhs.add(-delta_t * delta_t * theta * (1 - theta), tmp);
 
     TrilinosWrappers::MPI::Vector tmp_v(old_solution_v);
     mass_matrix.vmult(tmp_v, old_solution_v); // M * v^n
     system_rhs.add(delta_t, tmp_v);
 
-    // Forcing term 
+    // Forcing term
 
     const unsigned int dofs_per_cell = fe->dofs_per_cell;
     const unsigned int n_q = quadrature->size();
 
     FEValues<dim> fe_values(*fe, *quadrature,
                             update_values | update_quadrature_points | update_JxW_values);
-
 
     Vector<double> cell_rhs(dofs_per_cell);
     std::vector<types::global_dof_index> dof_indices(dofs_per_cell);
@@ -223,17 +221,38 @@ void Wave::assemble_rhs_u()
             const double f_avg = theta * f_np1 + (1.0 - theta) * f_n;
 
             for (unsigned int i = 0; i < dofs_per_cell; ++i)
-                cell_rhs(i) += delta_t*delta_t* f_avg * fe_values.shape_value(i, q) * JxW;
+                cell_rhs(i) += delta_t * delta_t * f_avg * fe_values.shape_value(i, q) * JxW;
         }
 
         cell->get_dof_indices(dof_indices);
         rhs_f.add(dof_indices, cell_rhs);
     }
 
-        system_rhs.add(1.0, rhs_f);
-        system_rhs.compress(VectorOperation::add);
+    system_rhs.add(1.0, rhs_f);
+    system_rhs.compress(VectorOperation::add);
 
-        pcout << "||rhs_u|| = " << system_rhs.l2_norm() << std::endl;
+    pcout << "||rhs_u|| = " << system_rhs.l2_norm() << std::endl;
+
+    // DIRICHLET BOUNDARY CONDITIONS
+    // I add it here because I need the current system RHS
+    {
+        // U: enforce u^{n+1} = g(t^{n+1})
+        g.set_time(time + delta_t);
+
+        std::map<types::global_dof_index, double> boundary_values_u;
+        std::map<types::boundary_id, const Function<dim>*> boundary_functions_u;
+
+        // Assign g to all boundary ids present in the mesh
+        for (const auto id : mesh.get_boundary_ids())
+            boundary_functions_u[id] = &g;
+
+        VectorTools::interpolate_boundary_values(dof_handler,
+                                                 boundary_functions_u,
+                                                 boundary_values_u);
+
+        MatrixTools::apply_boundary_values(
+            boundary_values_u, matrix_u, solution_u, system_rhs, true);
+    }
 }
 
 void Wave::assemble_rhs_v()
@@ -244,12 +263,12 @@ void Wave::assemble_rhs_v()
     // RHS = M*v^n
     mass_matrix.vmult(system_rhs, old_solution_v);
 
-    // RHS -= dt*(1-theta)*K*u^n 
+    // RHS -= dt*(1-theta)*K*u^n
     TrilinosWrappers::MPI::Vector tmp(old_solution_u);
     stiffness_matrix.vmult(tmp, old_solution_u);
     system_rhs.add(-delta_t * (1.0 - theta), tmp);
 
-    // 
+    //
     TrilinosWrappers::MPI::Vector tmp2(solution_u);
     stiffness_matrix.vmult(tmp2, solution_u);
     system_rhs.add(-delta_t * theta, tmp2);
@@ -297,6 +316,26 @@ void Wave::assemble_rhs_v()
 
     system_rhs.add(1.0, rhs_f);
     system_rhs.compress(VectorOperation::add);
+
+    // BOUNDARY CONDITION
+    {
+        // V: enforce v^{n+1} = dg/dt(t^{n+1})
+        dgdt.set_time(time + delta_t);
+
+        std::map<types::global_dof_index, double> boundary_values_v;
+        std::map<types::boundary_id, const Function<dim>*> boundary_functions_v;
+
+        // Assign dgdt to all boundary ids present in the mesh
+        for (const auto id : mesh.get_boundary_ids())
+            boundary_functions_v[id] = &dgdt;
+
+        VectorTools::interpolate_boundary_values(dof_handler,
+                                                 boundary_functions_v,
+                                                 boundary_values_v);
+
+        MatrixTools::apply_boundary_values(
+            boundary_values_v, matrix_v, solution_v, system_rhs, true);
+    }
 
     pcout << "||rhs_v|| = " << system_rhs.l2_norm() << std::endl;
 }
@@ -356,7 +395,7 @@ void Wave::output() const
                                         /* index = */ timestep_number,
                                         MPI_COMM_WORLD,
                                         /* n_digits = */ 4,
-                                        /* time = */ time);
+                                        /* time = */ static_cast<long int>(time));
 }
 
 void Wave::run()

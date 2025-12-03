@@ -34,170 +34,170 @@
 
 using namespace dealii;
 
+// Forward declaration so Wave can use DirichletCondition<dim>
+template <int dim>
+class DirichletCondition;
+
 /**
  * Class managing the differential problem.
  */
 class Wave
 {
-public:
-  // Physical dimension (1D, 2D, 3D)
-  static constexpr unsigned int dim = 2;
+  public:
+    // Physical dimension (1D, 2D, 3D)
+    static constexpr unsigned int dim = 2;
 
-  // Constructor.
-  Wave(const std::string                               &mesh_file_name_,
-       const unsigned int                              &r_,
-       const double                                    &T_,
-       const double                                    &theta_,
-       const double                                    &delta_t_,
-       const Function<dim>                             &c_,
-       Function<dim>                             &f_,
-       const Function<dim>                             &u0_,
-       const Function<dim>                             &v0_)
-    : mesh_file_name(mesh_file_name_)
-    , r(r_)
-    , T(T_)
-    , theta(theta_)
-    , delta_t(delta_t_)
-    , c(c_)
-    , f(f_)
-    , u0(u0_) 
-    , v0(v0_)
-    , mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
-    , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
-    , mesh(MPI_COMM_WORLD)
-    , pcout(std::cout, mpi_rank == 0)
-  {}
+    // Constructor.
+    Wave(const std::string& mesh_file_name_,
+         const unsigned int& r_,
+         const double& T_,
+         const double& theta_,
+         const double& delta_t_,
+         const Function<dim>& c_,
+         Function<dim>& f_,
+         const Function<dim>& u0_,
+         const Function<dim>& v0_,
+         Function<dim>& g_,
+         Function<dim>& dgdt_)
+        : mesh_file_name(mesh_file_name_), r(r_), T(T_), theta(theta_), delta_t(delta_t_), c(c_), f(f_), u0(u0_), v0(v0_), g(g_), dgdt(dgdt_),
+          mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)), mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)), mesh(MPI_COMM_WORLD), pcout(std::cout, mpi_rank == 0)
+    {
+    }
 
-  // Run the time-dependent simulation.
-  void
-  run();
+    // Run the time-dependent simulation.
+    void
+    run();
 
-protected:
-  // Initialization.
-  void
-  setup();
+  protected:
+    // Initialization.
+    void
+    setup();
 
-  // Assembly of matrices (mass and laplace)
-  void
-  assemble_matrices();
-  
-  // Assembly rhs
-  void 
-  assemble_rhs_u();
+    // Assembly of matrices (mass and laplace)
+    void
+    assemble_matrices();
 
-  void 
-  assemble_rhs_v();
+    // Assembly rhs
+    void
+    assemble_rhs_u();
 
-  // System solution.
-  void
-  solve_u();
+    void
+    assemble_rhs_v();
 
-  void
-  solve_v();
+    // System solution.
+    void
+    solve_u();
 
-  // Output.
-  void
-  output() const;
+    void
+    solve_v();
 
-  // Name of the mesh.
-  const std::string mesh_file_name;
+    // Output.
+    void
+    output() const;
 
-  // Polynomial degree.
-  const unsigned int r;
+    // Name of the mesh.
+    const std::string mesh_file_name;
 
-  // Final time.
-  const double T;
+    // Polynomial degree.
+    const unsigned int r;
 
-  // Theta parameter for the theta method.
-  const double theta;
+    // Final time.
+    const double T;
 
-  // Time step.
-  const double delta_t;
+    // Theta parameter for the theta method.
+    const double theta;
 
-  // Current time.
-  double time = 0.0;
+    // Time step.
+    const double delta_t;
 
-  // Current timestep number.
-  unsigned int timestep_number = 0;
+    // Current time.
+    double time = 0.0;
 
-  // wave speed
-  const Function<dim> &c;
+    // Current timestep number.
+    unsigned int timestep_number = 0;
 
-  // Forcing term f(x,t)
-  Function<dim> &f;
+    // wave speed
+    const Function<dim>& c;
 
-  // Initial conditions
-  const Function<dim> &u0;
+    // Forcing term f(x,t)
+    Function<dim>& f;
 
-  const Function<dim> &v0;
-  
-  // Number of MPI processes.
-  const unsigned int mpi_size;
+    // Initial conditions
+    const Function<dim>& u0;
 
-  // Rank of the current MPI process.
-  const unsigned int mpi_rank;
+    const Function<dim>& v0;
 
-  // Triangulation.
-  parallel::fullydistributed::Triangulation<dim> mesh;
+    // boundary value for u
+    Function<dim>& g;
 
-  // Finite element space.
-  std::unique_ptr<FiniteElement<dim>> fe;
+    // boundary value for v (= dg/dt)
+    Function<dim>& dgdt;
 
-  // Quadrature formula.
-  std::unique_ptr<Quadrature<dim>> quadrature;
+    // Number of MPI processes.
+    const unsigned int mpi_size;
 
-  // DoF handler.
-  DoFHandler<dim> dof_handler;
+    // Rank of the current MPI process.
+    const unsigned int mpi_rank;
 
-  // Mass and stiffness matrices
-  TrilinosWrappers::SparseMatrix mass_matrix;
-  TrilinosWrappers::SparseMatrix stiffness_matrix;
+    // Triangulation.
+    parallel::fullydistributed::Triangulation<dim> mesh;
 
-  // System matrices
-  TrilinosWrappers::SparseMatrix matrix_u;
-  TrilinosWrappers::SparseMatrix matrix_v;
+    // Finite element space.
+    std::unique_ptr<FiniteElement<dim>> fe;
 
-  // System right-hand side.
-  TrilinosWrappers::MPI::Vector system_rhs;
+    // Quadrature formula.
+    std::unique_ptr<Quadrature<dim>> quadrature;
 
+    // DoF handler.
+    DoFHandler<dim> dof_handler;
 
-   // Solution vectors with ghost elements
-  TrilinosWrappers::MPI::Vector solution_u, solution_v;
-  TrilinosWrappers::MPI::Vector old_solution_u, old_solution_v;
+    // Mass and stiffness matrices
+    TrilinosWrappers::SparseMatrix mass_matrix;
+    TrilinosWrappers::SparseMatrix stiffness_matrix;
 
- 
-  // Output stream for process 0.
-  ConditionalOStream pcout;
+    // System matrices
+    TrilinosWrappers::SparseMatrix matrix_u;
+    TrilinosWrappers::SparseMatrix matrix_v;
+
+    // System right-hand side.
+    TrilinosWrappers::MPI::Vector system_rhs;
+
+    // Solution vectors with ghost elements
+    TrilinosWrappers::MPI::Vector solution_u, solution_v;
+    TrilinosWrappers::MPI::Vector old_solution_u, old_solution_v;
+
+    // Output stream for process 0.
+    ConditionalOStream pcout;
 };
 
 // Equation Data
 
 // Inizial condition u0
-template <int dim>
-class InitialU : public Function<dim>
-{
-  public:
-    virtual double value(const Point<dim>& p,
-                         const unsigned int /*component*/ = 0) const override
-    {
-        const double x = p[0] - 0.5;
-        const double y = p[1] - 0.5;
-        const double r2 = x * x + y * y;
-        return std::exp(-50.0 * r2);
-    }
-};
+// template <int dim>
+// class InitialValuesU : public Function<dim>
+// {
+//   public:
+//     virtual double value(const Point<dim>& p,
+//                          const unsigned int /*component*/ = 0) const override
+//     {
+//         const double x = p[0] - 0.5;
+//         const double y = p[1] - 0.5;
+//         const double r2 = x * x + y * y;
+//         return std::exp(-50.0 * r2);
+//     }
+// };
 
-// Initial condition v0
-template <int dim>
-class InitialV : public Function<dim>
-{
-  public:
-    virtual double value(const Point<dim>& /*p*/,
-                         const unsigned int /*component*/ = 0) const override
-    {
-        return 0.0;
-    }
-};
+// // Initial condition v0
+// template <int dim>
+// class InitialValuesV : public Function<dim>
+// {
+//   public:
+//     virtual double value(const Point<dim>& /*p*/,
+//                          const unsigned int /*component*/ = 0) const override
+//     {
+//         return 0.0;
+//     }
+// };
 
 // Wave speed function
 template <int dim>
@@ -211,19 +211,123 @@ class WaveSpeed : public Function<dim>
     }
 };
 
-// Right hand side forcing term 
+// // Right hand side forcing term
+// template <int dim>
+// class ForcingTerm : public Function<dim>
+// {
+//   public:
+//     virtual double value(const Point<dim>& /*p*/,
+//                          const unsigned int /*component*/ = 0) const override
+//     {
+//         return 0.0;
+//     }
+// };
+
+// // Dirichlet boundary condition
+// template <int dim>
+// class DirichletCondition : public Function<dim>
+// {
+//   public:
+//     virtual double value(const Point<dim>& /*p*/,
+//                          const unsigned int /*component*/ = 0) const override
+//     {
+//         return 0.0;
+//     }
+
+//     // Default-construct with an internally-defined derivative
+//     DirichletCondition()
+//         : Function<dim>(), derivative()
+//     {
+//     }
+
+//     // Public member so callers can use &g.derivative
+//     // Note: accessible on const instances as well
+//     class DerivativeImpl : public Function<dim>
+//     {
+//       public:
+//         virtual double value(const Point<dim>& /*p*/,
+//                              const unsigned int /*component*/ = 0) const override
+//         {
+//             return 0.0;
+//         }
+//     };
+
+//     DerivativeImpl derivative;
+// };
+
 template <int dim>
-class ForcingTerm : public Function<dim>
+class InitialValuesU : public Function<dim>
 {
   public:
     virtual double value(const Point<dim>& /*p*/,
-                         const unsigned int /*component*/ = 0) const override
+                         const unsigned int component = 0) const override
     {
-        return 0.0;
+        (void)component;
+        Assert(component == 0, ExcIndexRange(component, 0, 1));
+        return 0;
     }
 };
 
+template <int dim>
+class InitialValuesV : public Function<dim>
+{
+  public:
+    virtual double value(const Point<dim>& /*p*/,
+                         const unsigned int component = 0) const override
+    {
+        (void)component;
+        Assert(component == 0, ExcIndexRange(component, 0, 1));
+        return 0;
+    }
+};
 
+template <int dim>
+class RightHandSide : public Function<dim>
+{
+  public:
+    virtual double value(const Point<dim>& /*p*/,
+                         const unsigned int component = 0) const override
+    {
+        (void)component;
+        Assert(component == 0, ExcIndexRange(component, 0, 1));
+        return 0;
+    }
+};
 
+template <int dim>
+class BoundaryValuesU : public Function<dim>
+{
+  public:
+    virtual double value(const Point<dim>& p,
+                         const unsigned int component = 0) const override
+    {
+        (void)component;
+        Assert(component == 0, ExcIndexRange(component, 0, 1));
+
+        if ((this->get_time() <= 0.5) && (p[0] < 0.5) && (p[1] > 1. / 3) &&
+            (p[1] < 2. / 3))
+            return std::sin(this->get_time() * 4 * numbers::PI);
+        else
+            return 0;
+    }
+};
+
+template <int dim>
+class BoundaryValuesV : public Function<dim>
+{
+  public:
+    virtual double value(const Point<dim>& p,
+                         const unsigned int component = 0) const override
+    {
+        (void)component;
+        Assert(component == 0, ExcIndexRange(component, 0, 1));
+
+        if ((this->get_time() <= 0.5) && (p[0] < 0.5) && (p[1] > 1. / 3) &&
+            (p[1] < 2. / 3))
+            return (std::cos(this->get_time() * 4 * numbers::PI) * 4 * numbers::PI);
+        else
+            return 0;
+    }
+};
 
 #endif
