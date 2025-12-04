@@ -1,9 +1,9 @@
 {
 	"Mesh File Name": "../mesh/mesh-square-40.msh",
 	"R": "1",
-	"T": "5.0",
+	"T": "1.2",
 	"Theta": "0.5",
-	"Dt": "0.01",
+	"Dt": "0.0025",
 	"C": {
 		"Function constants": "",
 		"Function expression": "1.0",
@@ -15,8 +15,8 @@
 		"Variable names": "x, y, t"
 	},
 	"U0": {
-		"Function constants": "c=0.5, a=-30.0",
-		"Function expression": "exp(a*((x-c)*(x-c) + (y-c)*(y-c)))",
+		"Function constants": "alpha=2000, x0=0.3, y0=0.5",
+		"Function expression": "exp(-alpha*((x-x0)*(x-x0) + (y-y0)*(y-y0)))",
 		"Variable names": "x, y"
 	},
 	"V0": {

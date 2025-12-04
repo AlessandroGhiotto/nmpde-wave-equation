@@ -78,9 +78,6 @@ class Wave
     void
     assemble_rhs();
 
-    void
-    assemble_rhs();
-
     // System solution.
     void
     solve_a();
@@ -132,6 +129,9 @@ class Wave
     // boundary value for v (= dg/dt)
     Function<dim>& dgdt;
 
+    // boundary value for a (= d2g/dt2)
+    Function<dim>& dgdt;
+
     // Number of MPI processes.
     const unsigned int mpi_size;
 
@@ -153,6 +153,7 @@ class Wave
     // Mass and stiffness matrices
     TrilinosWrappers::SparseMatrix mass_matrix;
     TrilinosWrappers::SparseMatrix stiffness_matrix;
+    TrilinosWrappers::SparseMatrix matrix_a;
 
     // System right-hand side.
     TrilinosWrappers::MPI::Vector system_rhs;

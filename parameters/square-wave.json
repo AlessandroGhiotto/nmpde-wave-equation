@@ -1,22 +1,22 @@
 {
 	"Mesh File Name": "../mesh/mesh-square-40.msh",
 	"R": "1",
-	"T": "5.0",
+	"T": "2.0",
 	"Theta": "0.5",
-	"Dt": "0.01",
+	"Dt": "0.0035",
 	"C": {
 		"Function constants": "",
 		"Function expression": "1.0",
 		"Variable names": "x, y, t"
 	},
 	"F": {
-		"Function constants": "",
-		"Function expression": "0.0",
+		"Function constants": "xs=0.5, ys=0.5, sigma=0.015, f=5.0",
+		"Function expression": "if(sin(2*pi*f*t) > 0, exp(-((x-xs)*(x-xs) + (y-ys)*(y-ys)) / (2*sigma*sigma)), 0.0)",
 		"Variable names": "x, y, t"
 	},
 	"U0": {
-		"Function constants": "c=0.5, a=-30.0",
-		"Function expression": "exp(a*((x-c)*(x-c) + (y-c)*(y-c)))",
+		"Function constants": "",
+		"Function expression": "0.0",
 		"Variable names": "x, y"
 	},
 	"V0": {

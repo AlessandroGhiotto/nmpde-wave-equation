@@ -106,7 +106,9 @@ std::vector<unsigned int> ParameterReader::get_Nel_list() const
     return values;
 }
 
-// ------------------
+// ----------------------------
+// Helper functions for parsing function constants
+// ----------------------------
 double parse_value_with_pi(std::string value)
 {
     // trim
