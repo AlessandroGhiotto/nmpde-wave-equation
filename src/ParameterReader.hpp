@@ -3,11 +3,16 @@
 
 #include "wave.hpp" // for Wave::dim
 
+#include <deal.II/base/function_parser.h>
+#include <deal.II/base/numbers.h>
 #include <deal.II/base/parameter_handler.h>
-#include <deal.II/base/parsed_function.h>
 #include <deal.II/base/utilities.h>
 
+#include <algorithm>
 #include <iostream>
+#include <map>
+#include <regex>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -27,7 +32,7 @@ class ParameterReader
 
     // Load (parse) function definitions into objects
     void load_functions(const std::vector<std::string>& names,
-                        const std::vector<Functions::ParsedFunction<Wave::dim>*>& funcs);
+                        const std::vector<FunctionParser<Wave::dim>*>& funcs);
 
     // Helper to extract Nel list
     std::vector<unsigned int> get_Nel_list() const;

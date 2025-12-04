@@ -1,9 +1,9 @@
 {
 	"Mesh File Name": "../mesh/mesh-square-40.msh",
 	"R": "1",
-	"T": "5.0",
+	"T": "1.0",
 	"Theta": "0.5",
-	"Dt": "0.015625",
+	"Dt": "0.0025",
 	"C": {
 		"Function constants": "",
 		"Function expression": "1.0",
@@ -16,7 +16,7 @@
 	},
 	"U0": {
 		"Function constants": "",
-		"Function expression": "0.0",
+		"Function expression": "exp(-50.0*((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)))",
 		"Variable names": "x, y"
 	},
 	"V0": {
@@ -25,13 +25,13 @@
 		"Variable names": "x, y"
 	},
 	"G": {
-		"Function constants": "TT=0.5, XX=0.5, ya=0.333, yb=0.666, k=4.0*pi",
-		"Function expression": "if(t<=TT && x<XX && y>ya && y<yb, sin(k*t), 0.0)",
+		"Function constants": "",
+		"Function expression": "0.0",
 		"Variable names": "x, y, t"
 	},
 	"DGDT": {
-		"Function constants": "TT=0.5, XX=0.5, ya=0.333, yb=0.666, k=4.0*pi",
-		"Function expression": "if(t<=TT && x<XX && y>ya && y<yb, cos(k*t)*k, 0.0)",
+		"Function constants": "",
+		"Function expression": "0.0",
 		"Variable names": "x, y, t"
 	}
 }

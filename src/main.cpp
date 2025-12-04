@@ -25,32 +25,70 @@ int main(int argc, char* argv[])
     ParameterHandler prm;
     ParameterReader param(prm);
 
-    Functions::ParsedFunction<dim> u0;
-    Functions::ParsedFunction<dim> v0;
-    Functions::ParsedFunction<dim> c;
-    Functions::ParsedFunction<dim> f;
-    Functions::ParsedFunction<dim> g;
-    Functions::ParsedFunction<dim> dgdt;
+    FunctionParser<dim> c;
+    FunctionParser<dim> f;
+    FunctionParser<dim> u0;
+    FunctionParser<dim> v0;
+    FunctionParser<dim> g;
+    FunctionParser<dim> dgdt; // derivative of g over time
 
     std::vector<std::string> function_names { "C", "F", "U0", "V0", "G", "DGDT" };
     param.declare(function_names);
-    param.parse(parameters_file);
-    param.load_functions(function_names, { &c, &f, &u0, &v0, &g, &dgdt });
 
-    Wave problem(
-        /* mesh filename */ prm.get("Mesh File Name"),
-        /* degree */ prm.get_integer("R"),
-        /* T */ prm.get_double("T"),
-        /* theta */ prm.get_double("Theta"),
-        /* delta_t */ prm.get_double("Dt"),
-        /* wave speed*/ c,
-        /* forcing term RHS*/ f,
-        /* initial u */ u0,
-        /* initial v */ v0,
-        /* u boundary cond */ g,
-        /* v buondary cond */ dgdt);
+    try
+    {
+        param.parse(parameters_file);
+        param.load_functions(function_names, { &c, &f, &u0, &v0, &g, &dgdt });
 
-    problem.run();
+        // Minimal debug output to catch bad numeric fields from JSON
+        std::cout << "Parsed parameters:" << std::endl;
+        std::cout << "  Mesh File Name: " << prm.get("Mesh File Name") << std::endl;
+        std::cout << "  R (degree): " << prm.get_integer("R") << std::endl;
+        std::cout << "  T: " << prm.get_double("T") << std::endl;
+        std::cout << "  Theta: " << prm.get_double("Theta") << std::endl;
+        std::cout << "  Dt: " << prm.get_double("Dt") << std::endl;
+    }
+    catch (const std::invalid_argument& e)
+    {
+        std::cerr << "Error while parsing parameters/functions: " << e.what() << std::endl;
+        std::cerr << "Hint: check JSON fields (R, T, Theta, Dt) and function strings; ensure numeric fields are valid numbers and not empty." << std::endl;
+        return 1;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Unexpected error while parsing parameters: " << e.what() << std::endl;
+        return 1;
+    }
+
+    try
+    {
+        Wave problem(
+            /* mesh filename */ prm.get("Mesh File Name"),
+            /* degree */ prm.get_integer("R"),
+            /* T */ prm.get_double("T"),
+            /* theta */ prm.get_double("Theta"),
+            /* delta_t */ prm.get_double("Dt"),
+            /* wave speed*/ c,
+            /* forcing term RHS*/ f,
+            /* initial u */ u0,
+            /* initial v */ v0,
+            /* u boundary cond */ g,
+            /* v buondary cond */ dgdt);
+
+        problem.run();
+    }
+    catch (const std::invalid_argument& e)
+    {
+        std::cerr << "Error while initializing or running Wave: " << e.what() << std::endl;
+        std::cerr << "Likely cause: a non-numeric or malformed value in the parameter file (stod failure)." << std::endl;
+        std::cerr << "Please verify fields like 'R', 'T', 'Theta', 'Dt' and function definitions C/F/U0/V0/G/DGDT in " << parameters_file << std::endl;
+        return 1;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Unexpected error: " << e.what() << std::endl;
+        return 1;
+    }
 
     return 0;
 }

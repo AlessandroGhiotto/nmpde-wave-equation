@@ -1,35 +1,11 @@
 #include "ParameterReader.hpp"
-
 #include "wave.hpp"
 
 static constexpr unsigned int dim = Wave::dim;
 
-// class ParameterReader
-// {
-//   public:
-//     ParameterReader(ParameterHandler& paramhandler) : prm(paramhandler)
-//     {
-//     }
-
-//     // Declare scalar + function subsections
-//     void declare(const std::vector<std::string>& function_names);
-
-//     // Parse file after declaration
-//     void parse(const std::string& filename);
-
-//     // Load (parse) function definitions into objects
-//     void load_functions(const std::vector<std::string>& names,
-//                         const std::vector<Functions::ParsedFunction<dim>*>& funcs);
-
-//     // Helper to extract Nel list
-//     std::vector<unsigned int> get_Nel_list() const;
-
-//   private:
-//     void declare_scalar_parameters();
-//     void declare_function_subsections(const std::vector<std::string>& names);
-
-//     ParameterHandler& prm;
-// };
+double parse_value_with_pi(std::string value);
+std::map<std::string, double>
+parse_constants_with_pi_and_multiplication(const std::string& s);
 
 ParameterReader::ParameterReader(ParameterHandler& paramhandler)
     : prm(paramhandler)
@@ -70,7 +46,18 @@ void ParameterReader::declare_function_subsections(const std::vector<std::string
     for (const auto& n : names)
     {
         prm.enter_subsection(n);
-        Functions::ParsedFunction<dim>::declare_parameters(prm, dim);
+        prm.declare_entry("Function constants",
+                          "",
+                          Patterns::Anything(),
+                          "List of function constants");
+        prm.declare_entry("Function expression",
+                          "0.0",
+                          Patterns::Anything(),
+                          "Function expression");
+        prm.declare_entry("Variable names",
+                          "",
+                          Patterns::Anything(),
+                          "List of variable names");
         prm.leave_subsection();
     }
 }
@@ -87,7 +74,7 @@ void ParameterReader::parse(const std::string& filename)
 }
 
 void ParameterReader::load_functions(const std::vector<std::string>& names,
-                                     const std::vector<Functions::ParsedFunction<dim>*>& funcs)
+                                     const std::vector<FunctionParser<dim>*>& funcs)
 {
     if (names.size() != funcs.size())
     {
@@ -97,7 +84,13 @@ void ParameterReader::load_functions(const std::vector<std::string>& names,
     for (unsigned int i = 0; i < names.size(); ++i)
     {
         prm.enter_subsection(names[i]);
-        funcs[i]->parse_parameters(prm);
+        auto constants = parse_constants_with_pi_and_multiplication(prm.get("Function constants"));
+        constants["pi"] = numbers::PI;
+        bool time_dependent = (prm.get("Variable names").find("t") != std::string::npos);
+        funcs[i]->initialize(prm.get("Variable names"),
+                             prm.get("Function expression"),
+                             constants,
+                             time_dependent);
         prm.leave_subsection();
     }
 }
@@ -111,4 +104,64 @@ std::vector<unsigned int> ParameterReader::get_Nel_list() const
     for (const auto& t : tokens)
         values.push_back(static_cast<unsigned int>(std::stoul(t))); // Convert string to unsigned integer
     return values;
+}
+
+// ------------------
+double parse_value_with_pi(std::string value)
+{
+    // trim
+    auto trim = [](std::string& x) {
+        x.erase(0, x.find_first_not_of(" \t"));
+        x.erase(x.find_last_not_of(" \t") + 1);
+    };
+    trim(value);
+
+    // Case 1: pure pi
+    std::string v_lower = value;
+    std::transform(v_lower.begin(), v_lower.end(), v_lower.begin(), ::tolower);
+    if (v_lower == "pi")
+        return dealii::numbers::PI;
+
+    // Case 2: simple form: number * pi
+    std::regex mul_pattern(R"(^\s*([0-9]*\.?[0-9]+)\s*\*\s*(pi)\s*$)",
+                           std::regex::icase);
+    std::smatch match;
+
+    if (std::regex_match(value, match, mul_pattern))
+    {
+        double c = std::stod(match[1].str());
+        return c * dealii::numbers::PI;
+    }
+
+    // Otherwise, just parse numeric literal
+    return std::stod(value);
+}
+
+std::map<std::string, double>
+parse_constants_with_pi_and_multiplication(const std::string& s)
+{
+    std::map<std::string, double> m;
+    std::stringstream ss(s);
+    std::string item;
+
+    while (std::getline(ss, item, ','))
+    {
+        auto pos = item.find('=');
+        if (pos == std::string::npos)
+            continue;
+
+        std::string key = item.substr(0, pos);
+        std::string value = item.substr(pos + 1);
+
+        auto trim = [](std::string& x) {
+            x.erase(0, x.find_first_not_of(" \t"));
+            x.erase(x.find_last_not_of(" \t") + 1);
+        };
+        trim(key);
+        trim(value);
+
+        m[key] = parse_value_with_pi(value);
+    }
+
+    return m;
 }

@@ -39,8 +39,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfloat-conversion -Wmissing-braces -Wno
 
 ###########################################
 
-add_executable(wmain src/wmain.cpp src/wave.cpp)
+add_library(Wave STATIC src/wave.cpp)
+deal_ii_setup_target(Wave)
+
+add_executable(wmain src/wmain.cpp)
+target_link_libraries(wmain Wave)
 deal_ii_setup_target(wmain)
 
-add_executable(main src/main.cpp src/wave.cpp src/ParameterReader.cpp)
+add_executable(main src/main.cpp src/ParameterReader.cpp)
+target_link_libraries(main Wave)
 deal_ii_setup_target(main)
