@@ -162,26 +162,14 @@ void WaveNewmark::assemble_matrices()
 
 void WaveNewmark::assemble_rhs()
 {
-    // assembling rhs for u linear system
-    // Aun+1=RHS(un,vn,fn,fn+1,θ,Δt)
+    // Assembling RHS for (M + dt^2 * beta * A) a^{n+1} = f^{n+1} - A z
+    // where z = u^n + dt v^n + dt^2 (0.5 - beta) a^n
 
     pcout << "Assembling RHS" << std::endl;
 
-    // // RHS = f^{n+1} - A(u^n + Δt v^n + Δt^2 (0.5 - beta) a^n)
-
-    // system_rhs = 0.0;
-    // system_rhs.add(-1.0, old_solution_u);                              // RHS <- RHS - u^n
-    // system_rhs.add(-delta_t, old_solution_v);                          // RHS <- RHS - Δt v^n
-    // system_rhs.add(-delta_t * delta_t * (0.5 - beta), old_solution_a); // RHS <- RHS - Δt^2 (0.5 - beta) a^n
-    // stiffness_matrix.vmult(system_rhs, system_rhs);                    // RHS <- A * RHS
-
-    // // TrilinosWrappers::MPI::Vector tmp_v(old_solution_v);
-    // // mass_matrix.vmult(tmp_v, old_solution_v); // M * v^n
-    // // system_rhs.add(delta_t, tmp_v);
-
     system_rhs = 0.0;
 
-    // build z = u^n + dt v^n + dt^2 (0.5 - beta) a^n
+    // z = u^n + dt v^n + dt^2 (0.5 - beta) a^n
     TrilinosWrappers::MPI::Vector z(old_solution_u);
     z.add(delta_t, old_solution_v);
     z.add(delta_t * delta_t * (0.5 - beta), old_solution_a);
@@ -193,8 +181,7 @@ void WaveNewmark::assemble_rhs()
     // RHS = f^{n+1} - w
     system_rhs.add(-1.0, w);
 
-    // Forcing term
-
+    // Assemble load vector for f^{n+1}
     const unsigned int dofs_per_cell = fe->dofs_per_cell;
     const unsigned int n_q = quadrature->size();
 
@@ -206,6 +193,9 @@ void WaveNewmark::assemble_rhs()
 
     TrilinosWrappers::MPI::Vector rhs_f(system_rhs);
     rhs_f = 0.0;
+
+    // Set time for forcing once per cell (no need to set per quadrature point)
+    f.set_time(time + delta_t);
 
     for (const auto& cell : dof_handler.active_cell_iterators())
     {
@@ -220,8 +210,6 @@ void WaveNewmark::assemble_rhs()
             const double JxW = fe_values.JxW(q);
             const Point<dim>& x_q = fe_values.quadrature_point(q);
 
-            // future forcing term
-            f.set_time(time + delta_t);
             const double f_np1 = f.value(x_q);
 
             for (unsigned int i = 0; i < dofs_per_cell; ++i)
@@ -277,18 +265,20 @@ void WaveNewmark::solve_a()
 
 void WaveNewmark::update_u_v()
 {
+    // Newmark updates:
+    // u^{n+1} = u^n + dt v^n + dt^2 [(0.5 - beta) a^n + beta a^{n+1}]
+    // v^{n+1} = v^n + dt [(1 - gamma) a^n + gamma a^{n+1}]
+
     // update u
-    // before updating : solution_u = old_solution_u
     solution_u = old_solution_u;                                      // u^{n+1} <-- u^n
-    solution_u.add(delta_t, old_solution_v);                          // u^{n+1} <-- u^{n+1} + Δt v^n
-    solution_u.add(delta_t * delta_t * (0.5 - beta), old_solution_a); // u^{n+1} <-- u^{n+1} + Δt^2 (0.5 - beta) a^n
-    solution_u.add(delta_t * delta_t * beta, solution_a);             // u^{n+1} <-- u^{n+1} + Δt^2 beta a^{n+1}
+    solution_u.add(delta_t, old_solution_v);                          // + dt v^n
+    solution_u.add(delta_t * delta_t * (0.5 - beta), old_solution_a); // + dt^2 (0.5 - beta) a^n
+    solution_u.add(delta_t * delta_t * beta, solution_a);             // + dt^2 beta a^{n+1}
 
     // update v
-    // before updating : solution_v = old_solution_v
     solution_v = old_solution_v;                             // v^{n+1} <-- v^n
-    solution_v.add(delta_t * (1.0 - gamma), old_solution_a); // v^{n+1} <-- v^{n+1} + Δt (1 - gamma) a^n
-    solution_v.add(delta_t * gamma, solution_a);             // v^{n+1} <-- v^{n+1} + Δt gamma a^{n+1}
+    solution_v.add(delta_t * (1.0 - gamma), old_solution_a); // + dt (1 - gamma) a^n
+    solution_v.add(delta_t * gamma, solution_a);             // + dt gamma a^{n+1}
 }
 
 void WaveNewmark::output() const
