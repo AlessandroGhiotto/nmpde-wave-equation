@@ -3,6 +3,8 @@
 	"R": "1",
 	"T": "1.2",
 	"Theta": "0.5",
+	"Beta": "0.25",
+	"Gamma": "0.5",
 	"Dt": "0.0025",
 	"C": {
 		"Function constants": "",

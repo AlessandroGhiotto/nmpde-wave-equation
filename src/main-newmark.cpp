@@ -6,7 +6,7 @@ int main(int argc, char* argv[])
 
     // get the file name from the argument
     std::string parameters_file =
-        (argc > 1) ? std::string(argv[1]) : std::string("../parameters/sine-membrane-newmark.json");
+        (argc > 1) ? std::string(argv[1]) : std::string("../parameters/sine-membrane.json");
     if (argc <= 1)
     {
         std::cout << "Usage:./main <path-to-arguments-file> \nRemember you are inside /build" << std::endl;
