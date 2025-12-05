@@ -92,6 +92,7 @@ void WaveNewmark::setup()
         system_rhs.reinit(locally_owned_dofs, MPI_COMM_WORLD);
 
         pcout << "Setup complete!" << std::endl;
+        pcout << "-----------------------------------------------" << std::endl;
     }
 }
 
@@ -165,8 +166,6 @@ void WaveNewmark::assemble_rhs()
     // Assembling RHS for (M + dt^2 * beta * A) a^{n+1} = f^{n+1} - A z
     // where z = u^n + dt v^n + dt^2 (0.5 - beta) a^n
 
-    pcout << "Assembling RHS" << std::endl;
-
     system_rhs = 0.0;
 
     // z = u^n + dt v^n + dt^2 (0.5 - beta) a^n
@@ -222,8 +221,6 @@ void WaveNewmark::assemble_rhs()
 
     system_rhs.add(1.0, rhs_f);
     system_rhs.compress(VectorOperation::add);
-
-    pcout << "||rhs_u|| = " << system_rhs.l2_norm() << std::endl;
 
     // DIRICHLET BOUNDARY CONDITIONS
     // I add it here because I need the current system RHS
@@ -286,8 +283,6 @@ void WaveNewmark::apply_dirichlet_bc()
 
 void WaveNewmark::solve_a()
 {
-    pcout << "Solving for a^{n+1}" << std::endl;
-
     TrilinosWrappers::PreconditionSSOR preconditioner;
     preconditioner.initialize(matrix_a, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
@@ -295,9 +290,6 @@ void WaveNewmark::solve_a()
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
     solver.solve(matrix_a, solution_a, system_rhs, preconditioner);
-
-    pcout << "  CG iterations: " << solver_control.last_step() << std::endl;
-    pcout << "  ||a^{n+1}|| = " << solution_a.l2_norm() << std::endl;
 }
 
 void WaveNewmark::update_u_v()
@@ -360,18 +352,20 @@ void WaveNewmark::run()
 
     pcout << "||u0|| = " << old_solution_u.l2_norm() << std::endl;
     pcout << "||v0|| = " << old_solution_v.l2_norm() << std::endl;
+    pcout << "-----------------------------------------------" << std::endl;
 
     output();
     timestep_number = 0;
     time = 0.0;
 
+    // Configure concise logging/output interval
+    const unsigned int log_every = 10;           // change as needed
+    const unsigned int output_every = log_every; // align output frequency
+
     while (time < T)
     {
         time += delta_t;
         ++timestep_number;
-
-        pcout << "\n=== Time step " << timestep_number
-              << ", t = " << time << " ===" << std::endl;
 
         // compute a
         assemble_rhs();
@@ -387,7 +381,22 @@ void WaveNewmark::run()
         old_solution_v = solution_v;
         old_solution_a = solution_a;
 
-        if (timestep_number % 1 == 0)
+        // Concise log every n steps
+        if (timestep_number % log_every == 0)
+        {
+            const auto rhs_norm = system_rhs.l2_norm();
+            const auto a_norm = solution_a.l2_norm();
+
+            std::ostringstream oss;
+            oss << "Step " << std::setw(6) << timestep_number
+                << ",  t=" << std::scientific << std::setprecision(3) << std::setw(9) << time
+                << ",  ||rhs||=" << std::scientific << std::setprecision(3) << std::setw(9) << rhs_norm
+                << ",  ||a||=" << std::scientific << std::setprecision(3) << std::setw(9) << a_norm;
+
+            pcout << oss.str() << std::endl;
+        }
+
+        if (timestep_number % output_every == 0)
             output();
     }
 

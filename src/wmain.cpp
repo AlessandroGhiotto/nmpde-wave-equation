@@ -1,8 +1,8 @@
-#include "wave.hpp"
+#include "WaveTheta.hpp"
 
 int main(int argc, char* argv[])
 {
-    constexpr unsigned int dim = Wave::dim;
+    constexpr unsigned int dim = WaveTheta::dim;
 
     Utilities::MPI::MPI_InitFinalize mpi_init(argc, argv);
 
@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
     BoundaryValuesU<dim> g;
     BoundaryValuesV<dim> dgdt;
 
-    Wave problem(
+    WaveTheta problem(
         /* mesh filename */ "../mesh/mesh-square-40.msh",
         /* degree */ 1,
         /* T */ 5.0,

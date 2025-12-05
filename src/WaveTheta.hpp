@@ -1,5 +1,5 @@
-#ifndef WAVE_HPP
-#define WAVE_HPP
+#ifndef WAVE_THETA_HPP
+#define WAVE_THETA_HPP
 
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/quadrature_lib.h>
@@ -30,6 +30,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 
 using namespace dealii;
@@ -41,24 +42,24 @@ using namespace dealii;
 /**
  * Class managing the differential problem.
  */
-class Wave
+class WaveTheta
 {
   public:
     // Physical dimension (1D, 2D, 3D)
     static constexpr unsigned int dim = 2;
 
     // Constructor.
-    Wave(const std::string& mesh_file_name_,
-         const unsigned int& r_,
-         const double& T_,
-         const double& theta_,
-         const double& delta_t_,
-         const Function<dim>& c_,
-         Function<dim>& f_,
-         const Function<dim>& u0_,
-         const Function<dim>& v0_,
-         Function<dim>& g_,
-         Function<dim>& dgdt_)
+    WaveTheta(const std::string& mesh_file_name_,
+              const unsigned int& r_,
+              const double& T_,
+              const double& theta_,
+              const double& delta_t_,
+              const Function<dim>& c_,
+              Function<dim>& f_,
+              const Function<dim>& u0_,
+              const Function<dim>& v0_,
+              Function<dim>& g_,
+              Function<dim>& dgdt_)
         : mesh_file_name(mesh_file_name_), r(r_), T(T_), theta(theta_), delta_t(delta_t_), c(c_), f(f_), u0(u0_), v0(v0_), g(g_), dgdt(dgdt_),
           mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)), mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)), mesh(MPI_COMM_WORLD), pcout(std::cout, mpi_rank == 0)
     {
@@ -172,33 +173,6 @@ class Wave
 
 // Equation Data
 
-// Inizial condition u0
-// template <int dim>
-// class InitialValuesU : public Function<dim>
-// {
-//   public:
-//     virtual double value(const Point<dim>& p,
-//                          const unsigned int /*component*/ = 0) const override
-//     {
-//         const double x = p[0] - 0.5;
-//         const double y = p[1] - 0.5;
-//         const double r2 = x * x + y * y;
-//         return std::exp(-50.0 * r2);
-//     }
-// };
-
-// // Initial condition v0
-// template <int dim>
-// class InitialValuesV : public Function<dim>
-// {
-//   public:
-//     virtual double value(const Point<dim>& /*p*/,
-//                          const unsigned int /*component*/ = 0) const override
-//     {
-//         return 0.0;
-//     }
-// };
-
 // Wave speed function
 template <int dim>
 class WaveSpeed : public Function<dim>
@@ -210,50 +184,6 @@ class WaveSpeed : public Function<dim>
         return 1.0;
     }
 };
-
-// // Right hand side forcing term
-// template <int dim>
-// class ForcingTerm : public Function<dim>
-// {
-//   public:
-//     virtual double value(const Point<dim>& /*p*/,
-//                          const unsigned int /*component*/ = 0) const override
-//     {
-//         return 0.0;
-//     }
-// };
-
-// // Dirichlet boundary condition
-// template <int dim>
-// class DirichletCondition : public Function<dim>
-// {
-//   public:
-//     virtual double value(const Point<dim>& /*p*/,
-//                          const unsigned int /*component*/ = 0) const override
-//     {
-//         return 0.0;
-//     }
-
-//     // Default-construct with an internally-defined derivative
-//     DirichletCondition()
-//         : Function<dim>(), derivative()
-//     {
-//     }
-
-//     // Public member so callers can use &g.derivative
-//     // Note: accessible on const instances as well
-//     class DerivativeImpl : public Function<dim>
-//     {
-//       public:
-//         virtual double value(const Point<dim>& /*p*/,
-//                              const unsigned int /*component*/ = 0) const override
-//         {
-//             return 0.0;
-//         }
-//     };
-
-//     DerivativeImpl derivative;
-// };
 
 template <int dim>
 class InitialValuesU : public Function<dim>

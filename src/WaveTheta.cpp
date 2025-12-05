@@ -1,6 +1,6 @@
-#include "wave.hpp"
+#include "WaveTheta.hpp"
 
-void Wave::setup()
+void WaveTheta::setup()
 {
     pcout << "===============================================" << std::endl;
 
@@ -97,7 +97,7 @@ void Wave::setup()
 
 // Assembling mass and stiffness matrices
 
-void Wave::assemble_matrices()
+void WaveTheta::assemble_matrices()
 {
     pcout << "Assembling mass and stiffness matrices" << std::endl;
 
@@ -163,12 +163,10 @@ void Wave::assemble_matrices()
     matrix_v.copy_from(mass_matrix);
 }
 
-void Wave::assemble_rhs_u()
+void WaveTheta::assemble_rhs_u()
 {
     // assembling rhs for u linear system
     // Aun+1=RHS(un,vn,fn,fn+1,θ,Δt)
-
-    pcout << "Assembling RHS for u equation" << std::endl;
 
     // RHS = M * u^n + dt * M * v^n - dt * (1-theta) * dt * K * u^
 
@@ -231,10 +229,7 @@ void Wave::assemble_rhs_u()
     system_rhs.add(1.0, rhs_f);
     system_rhs.compress(VectorOperation::add);
 
-    pcout << "||rhs_u|| = " << system_rhs.l2_norm() << std::endl;
-
     // DIRICHLET BOUNDARY CONDITIONS
-    // I add it here because I need the current system RHS
     {
         // U: enforce u^{n+1} = g(t^{n+1})
         g.set_time(time + delta_t);
@@ -255,10 +250,8 @@ void Wave::assemble_rhs_u()
     }
 }
 
-void Wave::assemble_rhs_v()
+void WaveTheta::assemble_rhs_v()
 {
-
-    pcout << "Assembling RHS for v equation" << std::endl;
 
     // RHS = M*v^n
     mass_matrix.vmult(system_rhs, old_solution_v);
@@ -336,14 +329,10 @@ void Wave::assemble_rhs_v()
         MatrixTools::apply_boundary_values(
             boundary_values_v, matrix_v, solution_v, system_rhs, true);
     }
-
-    pcout << "||rhs_v|| = " << system_rhs.l2_norm() << std::endl;
 }
 
-void Wave::solve_u()
+void WaveTheta::solve_u()
 {
-    pcout << "Solving for u^{n+1}" << std::endl;
-
     TrilinosWrappers::PreconditionSSOR preconditioner;
     preconditioner.initialize(matrix_u, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
@@ -351,15 +340,10 @@ void Wave::solve_u()
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
     solver.solve(matrix_u, solution_u, system_rhs, preconditioner);
-
-    pcout << "  CG iterations: " << solver_control.last_step() << std::endl;
-    pcout << "  ||u^{n+1}|| = " << solution_u.l2_norm() << std::endl;
 }
 
-void Wave::solve_v()
+void WaveTheta::solve_v()
 {
-    pcout << "Solving for v^{n+1}" << std::endl;
-
     TrilinosWrappers::PreconditionSSOR preconditioner;
     preconditioner.initialize(matrix_v, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
@@ -367,12 +351,9 @@ void Wave::solve_v()
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
     solver.solve(matrix_v, solution_v, system_rhs, preconditioner);
-
-    pcout << "  CG iterations: " << solver_control.last_step() << std::endl;
-    pcout << "  ||v^{n+1}|| = " << solution_v.l2_norm() << std::endl;
 }
 
-void Wave::output() const
+void WaveTheta::output() const
 {
     DataOut<dim> data_out;
 
@@ -398,7 +379,7 @@ void Wave::output() const
                                         /* time = */ static_cast<long int>(time));
 }
 
-void Wave::run()
+void WaveTheta::run()
 {
     setup();
     assemble_matrices();
@@ -413,18 +394,19 @@ void Wave::run()
 
     pcout << "||u0|| = " << old_solution_u.l2_norm() << std::endl;
     pcout << "||v0|| = " << old_solution_v.l2_norm() << std::endl;
+    pcout << "-----------------------------------------------" << std::endl;
 
     output();
     timestep_number = 0;
     time = 0.0;
 
+    const unsigned int log_every = 10;           // change as needed
+    const unsigned int output_every = log_every; // align output frequency
+
     while (time < T)
     {
         time += delta_t;
         ++timestep_number;
-
-        pcout << "\n=== Time step " << timestep_number
-              << ", t = " << time << " ===" << std::endl;
 
         // Prima aggiorna u
         assemble_rhs_u();
@@ -437,7 +419,18 @@ void Wave::run()
         old_solution_u = solution_u;
         old_solution_v = solution_v;
 
-        if (timestep_number % 1 == 0)
+        if (timestep_number % log_every == 0)
+        {
+            // concise aligned log (scientific)
+            std::ostringstream oss;
+            oss << "Step " << std::setw(6) << timestep_number
+                << ",  t=" << std::scientific << std::setprecision(3) << std::setw(9) << time
+                << ",  ||u||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_u.l2_norm()
+                << ",  ||v||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_v.l2_norm();
+            pcout << oss.str() << std::endl;
+        }
+
+        if (timestep_number % output_every == 0)
             output();
     }
 

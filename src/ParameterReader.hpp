@@ -1,8 +1,6 @@
 #ifndef PARAMETER_READER_HPP
 #define PARAMETER_READER_HPP
 
-#include "wave.hpp" // for Wave::dim
-
 #include <deal.II/base/function_parser.h>
 #include <deal.II/base/numbers.h>
 #include <deal.II/base/parameter_handler.h>
@@ -18,7 +16,8 @@
 
 using namespace dealii;
 
-// Uses Wave::dim to bind parsed functions to the current problem dimension.
+static constexpr unsigned int dim = 2;
+
 class ParameterReader
 {
   public:
@@ -32,7 +31,7 @@ class ParameterReader
 
     // Load (parse) function definitions into objects
     void load_functions(const std::vector<std::string>& names,
-                        const std::vector<FunctionParser<Wave::dim>*>& funcs);
+                        const std::vector<FunctionParser<dim>*>& funcs);
 
     // Helper to extract Nel list
     std::vector<unsigned int> get_Nel_list() const;

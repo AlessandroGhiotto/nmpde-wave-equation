@@ -1,7 +1,4 @@
 #include "ParameterReader.hpp"
-#include "wave.hpp"
-
-static constexpr unsigned int dim = Wave::dim;
 
 double parse_value_with_pi(std::string value);
 std::map<std::string, double>
