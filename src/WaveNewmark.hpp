@@ -78,6 +78,10 @@ class WaveNewmark
     void
     assemble_rhs();
 
+    // Apply Dirichlet BCs
+    void
+    apply_dirichlet_bc();
+
     // System solution.
     void
     solve_a();

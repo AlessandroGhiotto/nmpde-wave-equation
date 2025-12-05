@@ -247,6 +247,43 @@ void WaveNewmark::assemble_rhs()
     // }
 }
 
+void WaveNewmark::apply_dirichlet_bc()
+{
+    // === Apply u = g(t) on the boundary ===
+    std::map<types::global_dof_index, double> boundary_values_u;
+    g.set_time(time); // your Function<dim> g(...)
+
+    for (const auto id : mesh.get_boundary_ids())
+        VectorTools::interpolate_boundary_values(dof_handler,
+                                                 id,
+                                                 g,
+                                                 boundary_values_u);
+
+    // We don't care about the matrix here, we just rewrite the vector.
+    TrilinosWrappers::MPI::Vector dummy_rhs;
+    MatrixTools::apply_boundary_values(boundary_values_u,
+                                       mass_matrix, // dummy
+                                       solution_u,
+                                       dummy_rhs,
+                                       false); // do NOT eliminate rows
+
+    // === Apply v = dg/dt (t) on the boundary ===
+    std::map<types::global_dof_index, double> boundary_values_v;
+    dgdt.set_time(time); // your Function<dim> dgdt(...)
+
+    for (const auto id : mesh.get_boundary_ids())
+        VectorTools::interpolate_boundary_values(dof_handler,
+                                                 id,
+                                                 dgdt,
+                                                 boundary_values_v);
+
+    MatrixTools::apply_boundary_values(boundary_values_v,
+                                       mass_matrix, // dummy
+                                       solution_v,
+                                       dummy_rhs,
+                                       false);
+}
+
 void WaveNewmark::solve_a()
 {
     pcout << "Solving for a^{n+1}" << std::endl;
@@ -339,8 +376,12 @@ void WaveNewmark::run()
         // compute a
         assemble_rhs();
         solve_a();
+
         // update u, v
         update_u_v();
+
+        // Enforce the displacement and velocity BCs
+        apply_dirichlet_bc();
 
         old_solution_u = solution_u;
         old_solution_v = solution_v;
