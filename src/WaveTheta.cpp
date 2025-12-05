@@ -8,25 +8,24 @@ void WaveTheta::setup()
     {
         pcout << "Initializing the mesh" << std::endl;
 
-        // Read serial mesh.
+        // Build the mesh in serial, then distribute to MPI ranks.
         Triangulation<dim> mesh_serial;
 
-        {
-            GridIn<dim> grid_in;
-            grid_in.attach_triangulation(mesh_serial);
+        // 'subdivided_hyper_rectangle_with_simplices': rectangles cut along diagonal
+        // so we keep Simplex finite elements
+        GridGenerator::subdivided_hyper_rectangle_with_simplices(
+            mesh_serial,
+            { N_el.first, N_el.second },
+            geometry.first, geometry.second,
+            false // we have Dirichlet BCs everywhere so we don't need to name the boundaries
+        );
 
-            std::ifstream mesh_file(mesh_file_name);
-            grid_in.read_msh(mesh_file);
-        }
-
-        // Copy the serial mesh into the parallel one.
-        {
-            GridTools::partition_triangulation(mpi_size, mesh_serial);
-
-            const auto construction_data = TriangulationDescription::Utilities::
+        // Partition and create the distributed triangulation from the serial one.
+        GridTools::partition_triangulation(mpi_size, mesh_serial);
+        const auto construction_data =
+            TriangulationDescription::Utilities::
                 create_description_from_triangulation(mesh_serial, MPI_COMM_WORLD);
-            mesh.create_triangulation(construction_data);
-        }
+        mesh.create_triangulation(construction_data);
 
         pcout << "  Number of elements = " << mesh.n_global_active_cells()
               << std::endl;
@@ -353,6 +352,19 @@ void WaveTheta::solve_v()
     solver.solve(matrix_v, solution_v, system_rhs, preconditioner);
 }
 
+void WaveTheta::prepare_output_filename()
+{
+    output_folder = "../results/" + problem_name + "/run-R" + std::to_string(r) +
+                    "-N" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
+                    "-dt" + clean_double(delta_t) +
+                    "-theta" + clean_double(theta) + "/";
+
+    if (!std::filesystem::exists(output_folder))
+    {
+        std::filesystem::create_directories(output_folder);
+    }
+}
+
 void WaveTheta::output() const
 {
     DataOut<dim> data_out;
@@ -368,14 +380,11 @@ void WaveTheta::output() const
 
     data_out.build_patches();
 
-    const std::filesystem::path mesh_path(mesh_file_name);
-    const std::string output_file_name = "output-" + mesh_path.stem().string();
-
-    data_out.write_vtu_with_pvtu_record(/* folder = */ "./",
-                                        /* basename = */ output_file_name,
+    data_out.write_vtu_with_pvtu_record(/* folder = */ output_folder,
+                                        /* basename = */ "solution",
                                         /* index = */ timestep_number,
                                         MPI_COMM_WORLD,
-                                        /* n_digits = */ 4,
+                                        /* n<_digits = */ 4,
                                         /* time = */ static_cast<long int>(time));
 }
 
@@ -383,6 +392,7 @@ void WaveTheta::run()
 {
     setup();
     assemble_matrices();
+    prepare_output_filename();
 
     pcout << "Setting initial conditions..." << std::endl;
 
@@ -400,8 +410,7 @@ void WaveTheta::run()
     timestep_number = 0;
     time = 0.0;
 
-    const unsigned int log_every = 10;           // change as needed
-    const unsigned int output_every = log_every; // align output frequency
+    const unsigned int log_every = 10;
 
     while (time < T)
     {
@@ -430,10 +439,27 @@ void WaveTheta::run()
             pcout << oss.str() << std::endl;
         }
 
-        if (timestep_number % output_every == 0)
-            output();
+        output();
     }
 
     pcout << "\nSimulation completed: " << timestep_number
           << " steps, final time t = " << time << std::endl;
+}
+
+// Helper function to create clean filenames from double values
+
+std::string clean_double(double x, int precision)
+{
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(precision) << x;
+    std::string s = out.str();
+
+    // Replace dot
+    std::replace(s.begin(), s.end(), '.', '_');
+
+    // Remove trailing zeros and underscore if needed
+    while (!s.empty() && (s.back() == '0' || s.back() == '_'))
+        s.pop_back();
+
+    return s;
 }

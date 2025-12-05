@@ -33,8 +33,11 @@ class ParameterReader
     void load_functions(const std::vector<std::string>& names,
                         const std::vector<FunctionParser<dim>*>& funcs);
 
-    // Helper to extract Nel list
-    std::vector<unsigned int> get_Nel_list() const;
+    // Helper to extract N_el_x and N_el_y
+    std::pair<unsigned int, unsigned int> get_nel() const;
+
+    // Helper to extract Geometry
+    std::pair<Point<dim>, Point<dim>> get_geometry() const;
 
   private:
     void declare_scalar_parameters();

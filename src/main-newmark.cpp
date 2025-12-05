@@ -24,6 +24,7 @@ int main(int argc, char* argv[])
 
     constexpr unsigned int dim = WaveNewmark::dim;
 
+    std::string problem_name = "newmark-" + std::filesystem::path(parameters_file).stem().string();
     ParameterHandler prm;
     ParameterReader param(prm);
 
@@ -46,7 +47,9 @@ int main(int argc, char* argv[])
 
         // Minimal debug output to catch bad numeric fields from JSON
         pcout << "Parsed parameters:" << std::endl;
-        pcout << "  Mesh File Name: " << prm.get("Mesh File Name") << std::endl;
+        pcout << "  Problem name: " << problem_name << std::endl;
+        pcout << "  Geometry: " << prm.get("Geometry") << std::endl;
+        pcout << "  Nel: " << prm.get("Nel") << std::endl;
         pcout << "  R (degree): " << prm.get_integer("R") << std::endl;
         pcout << "  T: " << prm.get_double("T") << std::endl;
         pcout << "  Beta: " << prm.get_double("Beta") << std::endl;
@@ -56,7 +59,7 @@ int main(int argc, char* argv[])
     catch (const std::invalid_argument& e)
     {
         pcout << "Error while parsing parameters/functions: " << e.what() << std::endl;
-        pcout << "Hint: check JSON fields (R, T, Beta, Gamma, Dt) and function strings; ensure numeric fields are valid numbers and not empty." << std::endl;
+        pcout << "Hint: check JSON fields (Geometry, Nel, R, T, Beta, Gamma, Dt) and function strings; ensure numeric fields are valid numbers and not empty." << std::endl;
         return 1;
     }
     catch (const std::exception& e)
@@ -68,7 +71,9 @@ int main(int argc, char* argv[])
     try
     {
         WaveNewmark problem(
-            /* mesh filename */ prm.get("Mesh File Name"),
+            /* problem name */ problem_name,
+            /* N_el */ param.get_nel(),
+            /* geometry */ param.get_geometry(),
             /* degree */ prm.get_integer("R"),
             /* T */ prm.get_double("T"),
             /* gamma */ prm.get_double("Gamma"),
@@ -87,7 +92,7 @@ int main(int argc, char* argv[])
     {
         pcout << "Error while initializing or running WaveNewmark: " << e.what() << std::endl;
         pcout << "Likely cause: a non-numeric or malformed value in the parameter file (stod failure)." << std::endl;
-        pcout << "Please verify fields like 'R', 'T', 'Theta', 'Dt' and function definitions C/F/U0/V0/G/DGDT in " << parameters_file << std::endl;
+        pcout << "Please verify fields like 'R', 'T', 'Beta', 'Gamma, 'Dt' and function definitions C/F/U0/V0/G/DGDT in " << parameters_file << std::endl;
         return 1;
     }
     catch (const std::exception& e)

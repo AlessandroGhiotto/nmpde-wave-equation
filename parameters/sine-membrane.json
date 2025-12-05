@@ -1,5 +1,6 @@
 {
-	"Mesh File Name": "../mesh/mesh-square-40.msh",
+	"Geometry": "[0.0, 3.0] x [0.0, 1.0]",
+	"Nel": "180, 60",
 	"R": "1",
 	"T": "5.0",
 	"Theta": "0.5",

@@ -1,5 +1,9 @@
 ## C++ ##
 
+# VTU AND PVTU FILES
+*.vtu
+*.pvtu
+
 # Prerequisites
 *.d
 

@@ -49,7 +49,9 @@ class WaveTheta
     static constexpr unsigned int dim = 2;
 
     // Constructor.
-    WaveTheta(const std::string& mesh_file_name_,
+    WaveTheta(const std::string& problem_name_,
+              const std::pair<unsigned int, unsigned int>& N_el_,
+              const std::pair<Point<dim>, Point<dim>>& geometry_,
               const unsigned int& r_,
               const double& T_,
               const double& theta_,
@@ -60,7 +62,7 @@ class WaveTheta
               const Function<dim>& v0_,
               Function<dim>& g_,
               Function<dim>& dgdt_)
-        : mesh_file_name(mesh_file_name_), r(r_), T(T_), theta(theta_), delta_t(delta_t_), c(c_), f(f_), u0(u0_), v0(v0_), g(g_), dgdt(dgdt_),
+        : problem_name(problem_name_), N_el(N_el_), geometry(geometry_), r(r_), T(T_), theta(theta_), delta_t(delta_t_), c(c_), f(f_), u0(u0_), v0(v0_), g(g_), dgdt(dgdt_),
           mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)), mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)), mesh(MPI_COMM_WORLD), pcout(std::cout, mpi_rank == 0)
     {
     }
@@ -81,23 +83,31 @@ class WaveTheta
     // Assembly rhs
     void
     assemble_rhs_u();
-
     void
     assemble_rhs_v();
 
     // System solution.
     void
     solve_u();
-
     void
     solve_v();
+
+    // compute output filename
+    void prepare_output_filename();
 
     // Output.
     void
     output() const;
 
-    // Name of the mesh.
-    const std::string mesh_file_name;
+    // Name of the problem and output folder
+    const std::string problem_name;
+    std::string output_folder;
+
+    // Number of elements in x and y directions.
+    std::pair<unsigned int, unsigned int> N_el;
+
+    // Geometry of the domain
+    const std::pair<Point<dim>, Point<dim>> geometry;
 
     // Polynomial degree.
     const unsigned int r;
@@ -259,5 +269,7 @@ class BoundaryValuesV : public Function<dim>
             return 0;
     }
 };
+
+std::string clean_double(double, int precision = 6);
 
 #endif

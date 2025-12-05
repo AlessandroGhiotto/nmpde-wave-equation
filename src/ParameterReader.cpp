@@ -11,10 +11,15 @@ ParameterReader::ParameterReader(ParameterHandler& paramhandler)
 
 void ParameterReader::declare_scalar_parameters()
 {
-    // prm.declare_entry("Nel",
-    //                   "10, 20, 40, 80, 160, 320",
-    //                   Patterns::List(Patterns::Integer(1), 1),
-    //                   "Number of elements in a face of the 2D mesh");
+    prm.declare_entry("Nel",
+                      "40",
+                      Patterns::List(Patterns::Integer(1), 1),
+                      "Number of elements in the 2D mesh. Use single value for square grid (e.g., '40') or two space-separated values for rectangular grid (e.g., '40 50')");
+
+    prm.declare_entry("Geometry",
+                      "[0.0, 1.0] x [0.0, 1.0]",
+                      Patterns::Anything(),
+                      "Geometry of the domain, in the format [x_min, x_max] x [y_min, y_max]");
 
     prm.declare_entry("Mesh File Name",
                       "../mesh/mesh-square-40.msh",
@@ -100,15 +105,59 @@ void ParameterReader::load_functions(const std::vector<std::string>& names,
     }
 }
 
-std::vector<unsigned int> ParameterReader::get_Nel_list() const
+std::pair<Point<dim>, Point<dim>> ParameterReader::get_geometry() const
+{
+    const auto geom_str = prm.get("Geometry");
+    // Expected format: [x_min, x_max] x [y_min, y_max]
+    std::regex pattern(R"(\[\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\]\s*x\s*\[\s*([-\d\.]+)\s*,\s*([-\d\.]+)\s*\])");
+    std::smatch match;
+    if (std::regex_match(geom_str, match, pattern))
+    {
+        double x_min = std::stod(match[1].str());
+        double x_max = std::stod(match[2].str());
+        double y_min = std::stod(match[3].str());
+        double y_max = std::stod(match[4].str());
+
+        return { Point<dim>(x_min, y_min), Point<dim>(x_max, y_max) };
+    }
+    else
+    {
+        throw std::invalid_argument("Invalid Geometry format in parameters.");
+    }
+}
+
+std::pair<unsigned int, unsigned int> ParameterReader::get_nel() const
 {
     const auto nel_str = prm.get("Nel");
-    const auto tokens = Utilities::split_string_list(nel_str); // split
-    std::vector<unsigned int> values;
-    values.reserve(tokens.size());
-    for (const auto& t : tokens)
-        values.push_back(static_cast<unsigned int>(std::stoul(t))); // Convert string to unsigned integer
-    return values;
+
+    // Trim whitespace
+    auto trim = [](std::string& x) {
+        x.erase(0, x.find_first_not_of(" \t"));
+        x.erase(x.find_last_not_of(" \t") + 1);
+    };
+    std::string trimmed = nel_str;
+    trim(trimmed);
+
+    // Split by comma
+    std::vector<std::string> tokens = Utilities::split_string_list(trimmed, ",");
+
+    if (tokens.size() == 1)
+    {
+        // Single value: duplicate for square grid
+        unsigned int nel = static_cast<unsigned int>(std::stoul(tokens[0]));
+        return { nel, nel };
+    }
+    else if (tokens.size() == 2)
+    {
+        // Two values: x and y
+        unsigned int nel_x = static_cast<unsigned int>(std::stoul(tokens[0]));
+        unsigned int nel_y = static_cast<unsigned int>(std::stoul(tokens[1]));
+        return { nel_x, nel_y };
+    }
+    else
+    {
+        throw std::invalid_argument("Invalid Nel format. Expected single value or two space-separated values.");
+    }
 }
 
 // ----------------------------
