@@ -167,22 +167,31 @@ void WaveNewmark::assemble_rhs()
 
     pcout << "Assembling RHS" << std::endl;
 
-    // RHS = M * u^n + dt * M * v^n - dt * (1-theta) * dt * K * u^
+    // // RHS = f^{n+1} - A(u^n + Δt v^n + Δt^2 (0.5 - beta) a^n)
 
-    // system_rhs = M * u^n
-    mass_matrix.vmult(system_rhs, old_solution_u);
+    // system_rhs = 0.0;
+    // system_rhs.add(-1.0, old_solution_u);                              // RHS <- RHS - u^n
+    // system_rhs.add(-delta_t, old_solution_v);                          // RHS <- RHS - Δt v^n
+    // system_rhs.add(-delta_t * delta_t * (0.5 - beta), old_solution_a); // RHS <- RHS - Δt^2 (0.5 - beta) a^n
+    // stiffness_matrix.vmult(system_rhs, system_rhs);                    // RHS <- A * RHS
 
-    // - k^2 * theta * (1-theta) * A * U^{n-1}
-    TrilinosWrappers::MPI::Vector tmp(old_solution_u);
-    tmp.add(1.0, old_solution_u);
-    tmp.add(delta_t, old_solution_v);
-    tmp.add(-delta_t * delta_t * (0.5 - beta), old_solution_a);
-    stiffness_matrix.vmult(tmp, tmp);
-    system_rhs.add(-1.0, tmp);
+    // // TrilinosWrappers::MPI::Vector tmp_v(old_solution_v);
+    // // mass_matrix.vmult(tmp_v, old_solution_v); // M * v^n
+    // // system_rhs.add(delta_t, tmp_v);
 
-    TrilinosWrappers::MPI::Vector tmp_v(old_solution_v);
-    mass_matrix.vmult(tmp_v, old_solution_v); // M * v^n
-    system_rhs.add(delta_t, tmp_v);
+    system_rhs = 0.0;
+
+    // build z = u^n + dt v^n + dt^2 (0.5 - beta) a^n
+    TrilinosWrappers::MPI::Vector z(old_solution_u);
+    z.add(delta_t, old_solution_v);
+    z.add(delta_t * delta_t * (0.5 - beta), old_solution_a);
+
+    // w = A * z
+    TrilinosWrappers::MPI::Vector w(system_rhs);
+    stiffness_matrix.vmult(w, z);
+
+    // RHS = f^{n+1} - w
+    system_rhs.add(-1.0, w);
 
     // Forcing term
 
@@ -269,19 +278,17 @@ void WaveNewmark::solve_a()
 void WaveNewmark::update_u_v()
 {
     // update u
-    TrilinosWrappers::MPI::Vector tmp(old_solution_u);
-    tmp.add(1.0, old_solution_u);
-    tmp.add(delta_t, old_solution_v);
-    tmp.add(delta_t * delta_t * (0.5 - beta), old_solution_a);
-    tmp.add(delta_t * delta_t * beta, solution_a);
-    solution_u = tmp;
+    // before updating : solution_u = old_solution_u
+    solution_u = old_solution_u;                                      // u^{n+1} <-- u^n
+    solution_u.add(delta_t, old_solution_v);                          // u^{n+1} <-- u^{n+1} + Δt v^n
+    solution_u.add(delta_t * delta_t * (0.5 - beta), old_solution_a); // u^{n+1} <-- u^{n+1} + Δt^2 (0.5 - beta) a^n
+    solution_u.add(delta_t * delta_t * beta, solution_a);             // u^{n+1} <-- u^{n+1} + Δt^2 beta a^{n+1}
 
     // update v
-    TrilinosWrappers::MPI::Vector tmp_v(old_solution_v);
-    tmp_v.add(1.0, old_solution_v);
-    tmp_v.add(delta_t * (1.0 - gamma), old_solution_a);
-    tmp_v.add(delta_t * gamma, solution_a);
-    solution_v = tmp_v;
+    // before updating : solution_v = old_solution_v
+    solution_v = old_solution_v;                             // v^{n+1} <-- v^n
+    solution_v.add(delta_t * (1.0 - gamma), old_solution_a); // v^{n+1} <-- v^{n+1} + Δt (1 - gamma) a^n
+    solution_v.add(delta_t * gamma, solution_a);             // v^{n+1} <-- v^{n+1} + Δt gamma a^{n+1}
 }
 
 void WaveNewmark::output() const
@@ -307,7 +314,7 @@ void WaveNewmark::output() const
                                         /* basename = */ output_file_name,
                                         /* index = */ timestep_number,
                                         MPI_COMM_WORLD,
-                                        /* n_digits = */ 4,
+                                        /* n<_digits = */ 4,
                                         /* time = */ static_cast<long int>(time));
 }
 
@@ -343,6 +350,7 @@ void WaveNewmark::run()
         assemble_rhs();
         solve_a();
         // update u, v
+        update_u_v();
 
         old_solution_u = solution_u;
         old_solution_v = solution_v;
