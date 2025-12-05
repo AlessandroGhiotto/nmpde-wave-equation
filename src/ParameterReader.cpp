@@ -34,7 +34,15 @@ void ParameterReader::declare_scalar_parameters()
     prm.declare_entry("Theta",
                       "0.5",
                       Patterns::Double(0.0, 1.0),
-                      "Theta parameter for the theta-method for time integration");
+                      "Theta parameter for the theta-method for time discretization");
+    prm.declare_entry("Beta",
+                      "0.25",
+                      Patterns::Double(0.0, 1.0),
+                      "Beta parameter for the newmark method for time discretization");
+    prm.declare_entry("Gamma",
+                      "0.5",
+                      Patterns::Double(0.0, 1.0),
+                      "Gamma parameter for the newmark method for time discretization");
     prm.declare_entry("Dt",
                       "0.01",
                       Patterns::Double(0.0),

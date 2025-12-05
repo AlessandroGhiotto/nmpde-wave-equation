@@ -42,10 +42,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfloat-conversion -Wmissing-braces -Wno
 add_library(Wave STATIC src/wave.cpp)
 deal_ii_setup_target(Wave)
 
+add_library(WaveNewmark STATIC src/WaveNewmark.cpp)
+deal_ii_setup_target(WaveNewmark)
+
+add_library(ParameterReader STATIC src/ParameterReader.cpp)
+deal_ii_setup_target(ParameterReader)
+
 add_executable(wmain src/wmain.cpp)
 target_link_libraries(wmain Wave)
 deal_ii_setup_target(wmain)
 
-add_executable(main src/main.cpp src/ParameterReader.cpp)
-target_link_libraries(main Wave)
+add_executable(main src/main.cpp)
+target_link_libraries(main Wave ParameterReader)
 deal_ii_setup_target(main)
+
+add_executable(main-newmark src/main-newmark.cpp)
+target_link_libraries(main-newmark WaveNewmark ParameterReader)
+deal_ii_setup_target(main-newmark)

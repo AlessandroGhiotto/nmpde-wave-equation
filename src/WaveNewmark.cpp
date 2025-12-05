@@ -1,6 +1,6 @@
 #include "WaveNewmark.hpp"
 
-void Wave::setup()
+void WaveNewmark::setup()
 {
     pcout << "===============================================" << std::endl;
 
@@ -97,7 +97,7 @@ void Wave::setup()
 
 // Assembling mass and stiffness matrices
 
-void Wave::assemble_matrices()
+void WaveNewmark::assemble_matrices()
 {
     pcout << "Assembling mass and stiffness matrices" << std::endl;
 
@@ -160,7 +160,7 @@ void Wave::assemble_matrices()
     matrix_a.add(beta * delta_t * delta_t, stiffness_matrix); // M + Δt^2 beta A
 }
 
-void Wave::assemble_rhs()
+void WaveNewmark::assemble_rhs()
 {
     // assembling rhs for u linear system
     // Aun+1=RHS(un,vn,fn,fn+1,θ,Δt)
@@ -250,7 +250,7 @@ void Wave::assemble_rhs()
     // }
 }
 
-void Wave::solve_a()
+void WaveNewmark::solve_a()
 {
     pcout << "Solving for a^{n+1}" << std::endl;
 
@@ -266,7 +266,7 @@ void Wave::solve_a()
     pcout << "  ||a^{n+1}|| = " << solution_a.l2_norm() << std::endl;
 }
 
-void Wave::update_u_v()
+void WaveNewmark::update_u_v()
 {
     // update u
     TrilinosWrappers::MPI::Vector tmp(old_solution_u);
@@ -284,7 +284,7 @@ void Wave::update_u_v()
     solution_v = tmp_v;
 }
 
-void Wave::output() const
+void WaveNewmark::output() const
 {
     DataOut<dim> data_out;
 
@@ -311,7 +311,7 @@ void Wave::output() const
                                         /* time = */ static_cast<long int>(time));
 }
 
-void Wave::run()
+void WaveNewmark::run()
 {
     setup();
     assemble_matrices();
