@@ -1,5 +1,6 @@
 {
-	"Mesh File Name": "../mesh/mesh-square-40.msh",
+	"Geometry": "[0.0, 1.0] x [0.0, 1.0]",
+	"Nel": "80",
 	"R": "1",
 	"T": "2.0",
 	"Theta": "0.5",
@@ -13,7 +14,7 @@
 	},
 	"F": {
 		"Function constants": "xs=0.5, ys=0.5, sigma=0.015, f=5.0",
-		"Function expression": "if(sin(2*pi*f*t) > 0, exp(-((x-xs)*(x-xs) + (y-ys)*(y-ys)) / (2*sigma*sigma)), 0.0)",
+		"Function expression": "if(sin(2*pi*f*t) > 0, exp(-((x-xs)^2 + (y-ys)^2) / (2*sigma^2)), 0.0)",
 		"Variable names": "x, y, t"
 	},
 	"U0": {

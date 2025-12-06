@@ -1,5 +1,6 @@
 {
-	"Mesh File Name": "../mesh/mesh-square-40.msh",
+	"Geometry": "[0.0, 1.0] x [0.0, 1.0]",
+	"Nel": "100",
 	"R": "1",
 	"T": "2.0",
 	"Theta": "0.5",
@@ -13,7 +14,7 @@
 	},
 	"F": {
 		"Function constants": "xs=0.5, ys=0.5, f0=20.0, sigma=0.01",
-		"Function expression": "((1 - 2*pi*pi*f0*f0*(t - 1/f0)*(t - 1/f0)) * exp(-pi*pi*f0*f0*(t - 1/f0)*(t - 1/f0))) * exp(-((x-xs)*(x-xs) + (y-ys)*(y-ys)) / (2*sigma*sigma))",
+		"Function expression": "((1 - 2*(pi*f0*(t - 1/f0))^2) * exp(-(pi*f0*(t - 1/f0))^2)) * exp(-((x-xs)^2 + (y-ys)^2) / (2*sigma^2))",
 		"Variable names": "x, y, t"
 	},
 	"U0": {
