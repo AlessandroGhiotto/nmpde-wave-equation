@@ -59,3 +59,7 @@ deal_ii_setup_target(main-theta)
 add_executable(main-newmark src/main-newmark.cpp)
 target_link_libraries(main-newmark WaveNewmark ParameterReader)
 deal_ii_setup_target(main-newmark)
+
+add_executable(main-newmark-multiparameterloop src/main-newmark-multiparameterloop.cpp)
+target_link_libraries(main-newmark-multiparameterloop WaveNewmark ParameterReader)
+deal_ii_setup_target(main-newmark-multiparameterloop)

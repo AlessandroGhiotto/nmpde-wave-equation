@@ -4,6 +4,15 @@
 *.vtu
 *.pvtu
 
+# MESH FOLDER
+**/mesh/*
+
+# BUILD FOLDER
+**/build/*
+
+# ------------------------------
+
+
 # Prerequisites
 *.d
 
@@ -36,8 +45,6 @@
 *.exe
 *.out
 *.app
-
-**/build/*
 
 ## LaTeX ##
 
