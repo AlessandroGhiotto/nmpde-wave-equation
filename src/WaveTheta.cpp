@@ -446,6 +446,30 @@ void WaveTheta::run()
           << " steps, final time t = " << time << std::endl;
 }
 
+double
+WaveTheta::compute_error(const VectorTools::NormType& norm_type,
+                         const Function<dim>& exact_solution) const
+{
+    const QGaussSimplex<dim> quadrature_error(r + 2);
+
+    FE_SimplexP<dim> fe_linear(1);
+    MappingFE mapping(fe_linear);
+
+    Vector<double> error_per_cell(mesh.n_active_cells());
+    VectorTools::integrate_difference(mapping,
+                                      dof_handler,
+                                      solution_u,
+                                      exact_solution,
+                                      error_per_cell,
+                                      quadrature_error,
+                                      norm_type);
+
+    const double error =
+        VectorTools::compute_global_error(mesh, error_per_cell, norm_type);
+
+    return error;
+}
+
 // Helper function to create clean filenames from double values
 
 std::string clean_double(double x, int precision)

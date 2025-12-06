@@ -15,6 +15,7 @@
 
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_in.h>
+#include <deal.II/grid/grid_out.h>
 #include <deal.II/grid/grid_tools.h>
 #include <deal.II/grid/tria.h>
 
@@ -28,10 +29,12 @@
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/vector_tools.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 using namespace dealii;
 
@@ -99,6 +102,11 @@ class WaveNewmark
 
     // Output.
     void output() const;
+
+    // compute error
+    double
+    compute_error(const VectorTools::NormType&,
+                  const Function<dim>&) const;
 
     // Name of the problem and output folder
     const std::string problem_name;

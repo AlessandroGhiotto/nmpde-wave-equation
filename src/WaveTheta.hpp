@@ -95,6 +95,11 @@ class WaveTheta
     // compute output filename
     void prepare_output_filename();
 
+    // compute error
+    double
+    compute_error(const VectorTools::NormType&,
+                  const Function<dim>&) const;
+
     // Output.
     void
     output() const;

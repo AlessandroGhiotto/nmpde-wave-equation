@@ -1,6 +1,4 @@
 #include "WaveNewmark.hpp"
-#include <algorithm>
-#include <sstream>
 
 void WaveNewmark::setup()
 {
@@ -21,6 +19,19 @@ void WaveNewmark::setup()
             geometry.first, geometry.second,
             false // we have Dirichlet BCs everywhere so we don't need to name the boundaries
         );
+
+        // Save the mesh to a file
+        {
+            const std::string mesh_file_name =
+                "../mesh/rectangle-simplices-" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
+                "-" + clean_double(geometry.first[0], 2) + "_" + clean_double(geometry.second[0], 2) + "x" +
+                clean_double(geometry.first[1], 2) + "_" + clean_double(geometry.second[1], 2) + ".vtk";
+
+            GridOut grid_out;
+            std::ofstream grid_out_file(mesh_file_name);
+            grid_out.write_vtk(mesh_serial, grid_out_file);
+            std::cout << "  Mesh saved to " << mesh_file_name << std::endl;
+        }
 
         // Partition and create the distributed triangulation from the serial one.
         GridTools::partition_triangulation(mpi_size, mesh_serial);
@@ -394,6 +405,30 @@ void WaveNewmark::run()
           << " steps, final time t = " << time << std::endl;
 }
 
+double
+WaveNewmark::compute_error(const VectorTools::NormType& norm_type,
+                           const Function<dim>& exact_solution) const
+{
+    const QGaussSimplex<dim> quadrature_error(r + 2);
+
+    FE_SimplexP<dim> fe_linear(1);
+    MappingFE mapping(fe_linear);
+
+    Vector<double> error_per_cell(mesh.n_active_cells());
+    VectorTools::integrate_difference(mapping,
+                                      dof_handler,
+                                      solution_u,
+                                      exact_solution,
+                                      error_per_cell,
+                                      quadrature_error,
+                                      norm_type);
+
+    const double error =
+        VectorTools::compute_global_error(mesh, error_per_cell, norm_type);
+
+    return error;
+}
+
 // Helper function to create clean filenames from double values
 
 std::string clean_double(double x, int precision)
@@ -409,5 +444,5 @@ std::string clean_double(double x, int precision)
     while (!s.empty() && (s.back() == '0' || s.back() == '_'))
         s.pop_back();
 
-    return s;
+    return s.empty() ? "0" : s;
 }
