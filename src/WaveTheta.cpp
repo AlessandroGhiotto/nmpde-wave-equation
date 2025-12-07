@@ -4,102 +4,32 @@ void WaveTheta::setup()
 {
     pcout << "===============================================" << std::endl;
 
-    // Create the mesh.
-    {
-        pcout << "Initializing the mesh" << std::endl;
-
-        // Build the mesh in serial, then distribute to MPI ranks.
-        Triangulation<dim> mesh_serial;
-
-        // 'subdivided_hyper_rectangle_with_simplices': rectangles cut along diagonal
-        // so we keep Simplex finite elements
-        GridGenerator::subdivided_hyper_rectangle_with_simplices(
-            mesh_serial,
-            { N_el.first, N_el.second },
-            geometry.first, geometry.second,
-            false // we have Dirichlet BCs everywhere so we don't need to name the boundaries
-        );
-
-        // Save the mesh to a file
-        if (mpi_rank == 0)
-        {
-            if (!std::filesystem::exists("../mesh/"))
-            {
-                std::filesystem::create_directories("../mesh/");
-            }
-            const std::string mesh_file_name =
-                "../mesh/rectangle-simplices-" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
-                "-" + clean_double(geometry.first[0], 2) + "_" + clean_double(geometry.second[0], 2) + "x" +
-                clean_double(geometry.first[1], 2) + "_" + clean_double(geometry.second[1], 2) + ".vtk";
-
-            GridOut grid_out;
-            std::ofstream grid_out_file(mesh_file_name);
-            grid_out.write_vtk(mesh_serial, grid_out_file);
-            pcout << "  Mesh saved to " << mesh_file_name << std::endl;
-        }
-
-        // Partition and create the distributed triangulation from the serial one.
-        GridTools::partition_triangulation(mpi_size, mesh_serial);
-        const auto construction_data =
-            TriangulationDescription::Utilities::
-                create_description_from_triangulation(mesh_serial, MPI_COMM_WORLD);
-        mesh.create_triangulation(construction_data);
-
-        pcout << "  Number of elements = " << mesh.n_global_active_cells()
-              << std::endl;
-    }
-
+    // Use base class methods
+    setup_mesh();
     pcout << "-----------------------------------------------" << std::endl;
 
-    // Initialize the finite element space.
-    {
-        pcout << "Initializing the finite element space" << std::endl;
-
-        fe = std::make_unique<FE_SimplexP<dim>>(r);
-
-        pcout << "  Degree                     = " << fe->degree << std::endl;
-        pcout << "  DoFs per cell              = " << fe->dofs_per_cell
-              << std::endl;
-
-        quadrature = std::make_unique<QGaussSimplex<dim>>(r + 1);
-
-        pcout << "  Quadrature points per cell = " << quadrature->size()
-              << std::endl;
-    }
-
+    setup_fe();
     pcout << "-----------------------------------------------" << std::endl;
 
-    // Initialize the DoF handler.
-    {
-        pcout << "Initializing the DoF handler" << std::endl;
-
-        dof_handler.reinit(mesh);
-        dof_handler.distribute_dofs(*fe);
-
-        pcout << "  Number of DoFs = " << dof_handler.n_dofs() << std::endl;
-    }
-
+    setup_dof_handler();
     pcout << "-----------------------------------------------" << std::endl;
 
-    // Initialize the linear system.
+    // Initialize the linear system
     {
         pcout << "Initializing the linear system" << std::endl;
 
         const IndexSet locally_owned_dofs = dof_handler.locally_owned_dofs();
-        const IndexSet locally_relevant_dofs =
-            DoFTools::extract_locally_relevant_dofs(dof_handler);
 
         pcout << "  Initializing the sparsity pattern" << std::endl;
-        TrilinosWrappers::SparsityPattern sparsity(locally_owned_dofs,
-                                                   MPI_COMM_WORLD);
+        TrilinosWrappers::SparsityPattern sparsity(locally_owned_dofs, MPI_COMM_WORLD);
         DoFTools::make_sparsity_pattern(dof_handler, sparsity);
         sparsity.compress();
 
         pcout << "  Initializing matrices" << std::endl;
-        mass_matrix.reinit(sparsity);      // M
-        stiffness_matrix.reinit(sparsity); // K (A)
-        matrix_u.reinit(sparsity);         // M + (Deltat*Theta)^2 * c^2 * K
-        matrix_v.reinit(sparsity);         // M
+        mass_matrix.reinit(sparsity);
+        stiffness_matrix.reinit(sparsity);
+        matrix_u.reinit(sparsity);
+        matrix_v.reinit(sparsity);
 
         pcout << "  Initializing vectors" << std::endl;
         solution_u.reinit(locally_owned_dofs, MPI_COMM_WORLD);
@@ -112,8 +42,6 @@ void WaveTheta::setup()
     }
 }
 
-// Assembling mass and stiffness matrices
-
 void WaveTheta::assemble_matrices()
 {
     pcout << "Assembling mass and stiffness matrices" << std::endl;
@@ -121,14 +49,12 @@ void WaveTheta::assemble_matrices()
     const unsigned int dofs_per_cell = fe->dofs_per_cell;
     const unsigned int n_q = quadrature->size();
 
-    FEValues<dim> fe_values(*fe,
-                            *quadrature,
+    FEValues<dim> fe_values(*fe, *quadrature,
                             update_values | update_gradients |
                                 update_quadrature_points | update_JxW_values);
 
     FullMatrix<double> cell_mass(dofs_per_cell, dofs_per_cell);
     FullMatrix<double> cell_stiffness(dofs_per_cell, dofs_per_cell);
-
     std::vector<types::global_dof_index> dof_indices(dofs_per_cell);
 
     mass_matrix = 0.0;
@@ -140,7 +66,6 @@ void WaveTheta::assemble_matrices()
             continue;
 
         fe_values.reinit(cell);
-
         cell_mass = 0.0;
         cell_stiffness = 0.0;
 
@@ -164,7 +89,6 @@ void WaveTheta::assemble_matrices()
         }
 
         cell->get_dof_indices(dof_indices);
-
         mass_matrix.add(dof_indices, cell_mass);
         stiffness_matrix.add(dof_indices, cell_stiffness);
     }
@@ -172,11 +96,11 @@ void WaveTheta::assemble_matrices()
     mass_matrix.compress(VectorOperation::add);
     stiffness_matrix.compress(VectorOperation::add);
 
-    // Matrix for u linear system
+    // Matrix for u linear system: M + (θ Δt)^2 K
     matrix_u.copy_from(mass_matrix);
-    matrix_u.add((theta * delta_t) * (theta * delta_t), stiffness_matrix); // M + (θ Δt)^2 K
+    matrix_u.add((theta * delta_t) * (theta * delta_t), stiffness_matrix);
 
-    // Matrix for v linear system
+    // Matrix for v linear system: M
     matrix_v.copy_from(mass_matrix);
 }
 
@@ -200,7 +124,6 @@ void WaveTheta::assemble_rhs_u()
     system_rhs.add(delta_t, tmp_v);
 
     // Forcing term
-
     const unsigned int dofs_per_cell = fe->dofs_per_cell;
     const unsigned int n_q = quadrature->size();
 
@@ -246,15 +169,13 @@ void WaveTheta::assemble_rhs_u()
     system_rhs.add(1.0, rhs_f);
     system_rhs.compress(VectorOperation::add);
 
-    // DIRICHLET BOUNDARY CONDITIONS
+    // Dirichlet boundary conditions
     {
-        // U: enforce u^{n+1} = g(t^{n+1})
         g.set_time(time + delta_t);
 
         std::map<types::global_dof_index, double> boundary_values_u;
         std::map<types::boundary_id, const Function<dim>*> boundary_functions_u;
 
-        // Assign g to all boundary ids present in the mesh
         for (const auto id : mesh.get_boundary_ids())
             boundary_functions_u[id] = &g;
 
@@ -269,7 +190,6 @@ void WaveTheta::assemble_rhs_u()
 
 void WaveTheta::assemble_rhs_v()
 {
-
     // RHS = M*v^n
     mass_matrix.vmult(system_rhs, old_solution_v);
 
@@ -278,7 +198,6 @@ void WaveTheta::assemble_rhs_v()
     stiffness_matrix.vmult(tmp, old_solution_u);
     system_rhs.add(-delta_t * (1.0 - theta), tmp);
 
-    //
     TrilinosWrappers::MPI::Vector tmp2(solution_u);
     stiffness_matrix.vmult(tmp2, solution_u);
     system_rhs.add(-delta_t * theta, tmp2);
@@ -327,15 +246,13 @@ void WaveTheta::assemble_rhs_v()
     system_rhs.add(1.0, rhs_f);
     system_rhs.compress(VectorOperation::add);
 
-    // BOUNDARY CONDITION
+    // Boundary condition
     {
-        // V: enforce v^{n+1} = dg/dt(t^{n+1})
         dgdt.set_time(time + delta_t);
 
         std::map<types::global_dof_index, double> boundary_values_v;
         std::map<types::boundary_id, const Function<dim>*> boundary_functions_v;
 
-        // Assign dgdt to all boundary ids present in the mesh
         for (const auto id : mesh.get_boundary_ids())
             boundary_functions_v[id] = &dgdt;
 
@@ -370,154 +287,14 @@ void WaveTheta::solve_v()
     solver.solve(matrix_v, solution_v, system_rhs, preconditioner);
 }
 
-void WaveTheta::prepare_output_filename()
-{
-    output_folder = "../results/" + problem_name + "/run-R" + std::to_string(r) +
-                    "-N" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
-                    "-dt" + clean_double(delta_t) +
-                    "-theta" + clean_double(theta) + "/";
-
-    if (mpi_rank == 0)
-    {
-        if (!std::filesystem::exists(output_folder))
-        {
-            std::filesystem::create_directories(output_folder);
-        }
-
-        // Open energy log file
-        energy_log_file.open(output_folder + "energy.csv");
-        if (energy_log_file.is_open())
-        {
-            energy_log_file << "timestep,time,energy" << std::endl;
-        }
-
-        // Open error log file (if exact solution provided)
-        if (exact_solution != nullptr)
-        {
-            error_log_file.open(output_folder + "error.csv");
-            if (error_log_file.is_open())
-            {
-                error_log_file << "timestep,time,L2_error,H1_error,rel_L2_error,rel_H1_error" << std::endl;
-            }
-
-            // Open convergence log file (append mode)
-            std::string convergence_file_path = "../results/" + problem_name + "/convergence.csv";
-            bool file_exists = std::filesystem::exists(convergence_file_path);
-            convergence_file.open(convergence_file_path, std::ios_base::app);
-            if (convergence_file.is_open() && !file_exists)
-            {
-                convergence_file << "h,N_el_x,N_el_y,r,theta,dt,T,rel_L2_error_avg,rel_H1_error_avg" << std::endl;
-            }
-        }
-    }
-}
-
-void WaveTheta::compute_and_log_energy()
-{
-    // Compute energy: E = 0.5 * (M*v·v + c^2*A*u·u)
-    TrilinosWrappers::MPI::Vector tmp_u(solution_u);
-    TrilinosWrappers::MPI::Vector tmp_v(solution_v);
-    stiffness_matrix.vmult(tmp_u, solution_u);
-    mass_matrix.vmult(tmp_v, solution_v);
-    current_energy = 0.5 * (tmp_v * solution_v + tmp_u * solution_u);
-
-    // Log to file (only rank 0)
-    if (mpi_rank == 0 && energy_log_file.is_open())
-    {
-        energy_log_file << timestep_number << "," << time << "," << current_energy << std::endl;
-    }
-}
-
-void WaveTheta::compute_and_log_error()
-{
-    if (exact_solution == nullptr)
-        return;
-
-    exact_solution->set_time(time);
-
-    const double error_L2 = compute_error(VectorTools::L2_norm, *exact_solution);
-    const double error_H1 = compute_error(VectorTools::H1_norm, *exact_solution);
-
-    const double rel_error_L2 = compute_relative_error(VectorTools::L2_norm, *exact_solution);
-    const double rel_error_H1 = compute_relative_error(VectorTools::H1_norm, *exact_solution);
-
-    // Log to file (only rank 0)
-    if (mpi_rank == 0 && error_log_file.is_open())
-    {
-        error_log_file << timestep_number << "," << time << ","
-                       << std::scientific << std::setprecision(6)
-                       << error_L2 << "," << error_H1 << ","
-                       << rel_error_L2 << "," << rel_error_H1 << std::endl;
-    }
-
-    // Accumulate for averaging (using relative errors)
-    accumulated_L2_error += rel_error_L2;
-    accumulated_H1_error += rel_error_H1;
-    error_sample_count++;
-}
-
-void WaveTheta::compute_final_errors()
-{
-    if (exact_solution == nullptr || error_sample_count == 0)
-        return;
-
-    const double avg_L2_error = accumulated_L2_error / error_sample_count;
-    const double avg_H1_error = accumulated_H1_error / error_sample_count;
-
-    // Write to convergence file (only rank 0)
-    if (mpi_rank == 0 && convergence_file.is_open())
-    {
-        const double h = 1.0 / std::sqrt(N_el.first * N_el.second);
-        convergence_file << h << "," << N_el.first << "," << N_el.second << "," << r << ","
-                         << theta << "," << delta_t << "," << T << ","
-                         << std::scientific << std::setprecision(6)
-                         << avg_L2_error << "," << avg_H1_error << std::endl;
-
-        pcout << "Average errors over time:" << std::endl;
-        pcout << "  Average L2 error  = " << avg_L2_error << std::endl;
-        pcout << "  Average H1 error  = " << avg_H1_error << std::endl;
-    }
-}
-
-void WaveTheta::output() const
-{
-    DataOut<dim> data_out;
-
-    data_out.add_data_vector(dof_handler, solution_u, "u");
-    data_out.add_data_vector(dof_handler, solution_v, "v");
-
-    // Add vector for parallel partition.
-    std::vector<unsigned int> partition_int(mesh.n_active_cells());
-    GridTools::get_subdomain_association(mesh, partition_int);
-    const Vector<double> partitioning(partition_int.begin(), partition_int.end());
-    data_out.add_data_vector(partitioning, "partitioning");
-
-    data_out.build_patches();
-
-    data_out.write_vtu_with_pvtu_record(/* folder = */ output_folder,
-                                        /* basename = */ "solution",
-                                        /* index = */ timestep_number,
-                                        MPI_COMM_WORLD,
-                                        /* n<_digits = */ 4,
-                                        /* time = */ static_cast<long int>(time));
-}
-
-void WaveTheta::print_step_info()
-{
-    std::ostringstream oss;
-    oss << "Step " << std::setw(6) << timestep_number
-        << ",  t=" << std::scientific << std::setprecision(3) << std::setw(9) << time
-        << ",  ||u||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_u.l2_norm()
-        << ",  ||v||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_v.l2_norm()
-        << ",  E=" << std::scientific << std::setprecision(3) << std::setw(9) << current_energy;
-    pcout << oss.str() << std::endl;
-}
-
 void WaveTheta::run()
 {
     setup();
     assemble_matrices();
-    prepare_output_filename();
+
+    // Call base class method with theta-specific parameters
+    std::string method_params = "-theta" + clean_double(theta);
+    prepare_output_filename(method_params);
 
     pcout << "Setting initial conditions..." << std::endl;
 
@@ -540,11 +317,9 @@ void WaveTheta::run()
         time += delta_t;
         ++timestep_number;
 
-        // Prima aggiorna u
         assemble_rhs_u();
         solve_u();
 
-        // Poi aggiorna v
         assemble_rhs_v();
         solve_v();
 
@@ -568,100 +343,16 @@ void WaveTheta::run()
     pcout << "\nSimulation completed: " << timestep_number
           << " steps, final time t = " << time << std::endl;
 
-    // Compute and log final averaged errors
     compute_final_errors();
 
-    // Close log files (only rank 0)
+    // Close log files
     if (mpi_rank == 0)
     {
         if (energy_log_file.is_open())
-        {
             energy_log_file.close();
-        }
         if (error_log_file.is_open())
-        {
             error_log_file.close();
-        }
         if (convergence_file.is_open())
-        {
             convergence_file.close();
-        }
     }
-}
-
-double
-WaveTheta::compute_error(const VectorTools::NormType& norm_type,
-                         const Function<dim>& exact_solution) const
-{
-    const QGaussSimplex<dim> quadrature_error(r + 2);
-
-    FE_SimplexP<dim> fe_linear(1);
-    MappingFE mapping(fe_linear);
-
-    Vector<double> error_per_cell(mesh.n_active_cells());
-    VectorTools::integrate_difference(mapping,
-                                      dof_handler,
-                                      solution_u,
-                                      exact_solution,
-                                      error_per_cell,
-                                      quadrature_error,
-                                      norm_type);
-
-    const double error =
-        VectorTools::compute_global_error(mesh, error_per_cell, norm_type);
-
-    return error;
-}
-
-double
-WaveTheta::compute_relative_error(const VectorTools::NormType& norm_type,
-                                  const Function<dim>& exact_solution) const
-{
-    const double error = compute_error(norm_type, exact_solution);
-
-    // Compute norm of exact solution
-    const QGaussSimplex<dim> quadrature_error(r + 2);
-    FE_SimplexP<dim> fe_linear(1);
-    MappingFE mapping(fe_linear);
-
-    // Create a zero vector with the correct size
-    TrilinosWrappers::MPI::Vector zero_vector(dof_handler.locally_owned_dofs(), MPI_COMM_WORLD);
-    zero_vector = 0.0;
-
-    Vector<double> exact_per_cell(mesh.n_active_cells());
-
-    VectorTools::integrate_difference(mapping,
-                                      dof_handler,
-                                      zero_vector,
-                                      exact_solution,
-                                      exact_per_cell,
-                                      quadrature_error,
-                                      norm_type);
-
-    const double exact_norm =
-        VectorTools::compute_global_error(mesh, exact_per_cell, norm_type);
-
-    // Avoid division by zero
-    if (exact_norm < 1e-14)
-        return error;
-
-    return error / exact_norm;
-}
-
-// Helper function to create clean filenames from double values
-
-std::string clean_double(double x, int precision)
-{
-    std::ostringstream out;
-    out << std::fixed << std::setprecision(precision) << x;
-    std::string s = out.str();
-
-    // Replace dot
-    std::replace(s.begin(), s.end(), '.', '_');
-
-    // Remove trailing zeros and underscore if needed
-    while (!s.empty() && (s.back() == '0' || s.back() == '_'))
-        s.pop_back();
-
-    return s.empty() ? "0" : s;
 }

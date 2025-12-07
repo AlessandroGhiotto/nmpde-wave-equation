@@ -39,18 +39,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfloat-conversion -Wmissing-braces -Wno
 
 ###########################################
 
+# Add the base class library
+add_library(WaveEquationBase STATIC src/WaveEquationBase.cpp)
+deal_ii_setup_target(WaveEquationBase)
+
 add_library(WaveTheta STATIC src/WaveTheta.cpp)
+target_link_libraries(WaveTheta WaveEquationBase)
 deal_ii_setup_target(WaveTheta)
 
 add_library(WaveNewmark STATIC src/WaveNewmark.cpp)
+target_link_libraries(WaveNewmark WaveEquationBase)
 deal_ii_setup_target(WaveNewmark)
 
 add_library(ParameterReader STATIC src/ParameterReader.cpp)
 deal_ii_setup_target(ParameterReader)
-
-# add_executable(wmain src/wmain.cpp)
-# target_link_libraries(wmain WaveTheta)
-# deal_ii_setup_target(wmain)
 
 add_executable(main-theta src/main-theta.cpp)
 target_link_libraries(main-theta WaveTheta ParameterReader)

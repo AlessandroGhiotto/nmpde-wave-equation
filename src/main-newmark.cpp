@@ -35,17 +35,17 @@ int main(int argc, char* argv[])
     FunctionParser<dim> g;
     FunctionParser<dim> dgdt; // derivative of g over time
 
-    std::vector<std::string> function_names {
-        "C", "F", "U0", "V0", "G", "DGDT"
-    };
+    FunctionParser<dim> exact_solution;
+
+    std::vector<std::string> function_names { "C", "F", "U0", "V0", "G", "DGDT", "Solution" };
     param.declare(function_names);
 
     try
     {
         param.parse(parameters_file);
-        param.load_functions(function_names, { &c, &f, &u0, &v0, &g, &dgdt });
+        param.load_functions(function_names, { &c, &f, &u0, &v0, &g, &dgdt, &exact_solution });
 
-        // Minimal debug output to catch bad numeric fields from JSON
+        // Minimal debug output
         pcout << "Parsed parameters:" << std::endl;
         pcout << "  Problem name: " << problem_name << std::endl;
         pcout << "  Geometry: " << prm.get("Geometry") << std::endl;
@@ -68,6 +68,22 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    // Check if exact_solution was initialized, if not set it to nullptr
+    Function<dim>* exact_solution_ptr = nullptr;
+    try
+    {
+        prm.enter_subsection("Solution");
+        if (!prm.get("Function expression").empty())
+        {
+            exact_solution_ptr = &exact_solution;
+        }
+        prm.leave_subsection();
+    }
+    catch (...)
+    {
+        // If subsection doesn't exist, exact_solution_ptr remains nullptr
+    }
+
     try
     {
         WaveNewmark problem(
@@ -84,7 +100,10 @@ int main(int argc, char* argv[])
             /* initial u */ u0,
             /* initial v */ v0,
             /* u boundary cond */ g,
-            /* v buondary cond */ dgdt);
+            /* v buondary cond */ dgdt,
+            /* log every */ prm.get_integer("Log Every"),
+            /* print every */ prm.get_integer("Print Every"),
+            /* exact solution */ exact_solution_ptr);
 
         problem.run();
     }
@@ -92,7 +111,7 @@ int main(int argc, char* argv[])
     {
         pcout << "Error while initializing or running WaveNewmark: " << e.what() << std::endl;
         pcout << "Likely cause: a non-numeric or malformed value in the parameter file (stod failure)." << std::endl;
-        pcout << "Please verify fields like 'R', 'T', 'Beta', 'Gamma, 'Dt' and function definitions C/F/U0/V0/G/DGDT in " << parameters_file << std::endl;
+        pcout << "Please verify fields like 'R', 'T', 'Beta', 'Gamma', 'Dt' and function definitions C/F/U0/V0/G/DGDT in " << parameters_file << std::endl;
         return 1;
     }
     catch (const std::exception& e)

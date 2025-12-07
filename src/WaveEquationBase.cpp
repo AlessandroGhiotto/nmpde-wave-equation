@@ -1,0 +1,227 @@
+#include "WaveEquationBase.hpp"
+
+void WaveEquationBase::setup_mesh()
+{
+    pcout << "Initializing the mesh" << std::endl;
+
+    Triangulation<dim> mesh_serial;
+    GridGenerator::subdivided_hyper_rectangle_with_simplices(
+        mesh_serial,
+        { N_el.first, N_el.second },
+        geometry.first, geometry.second,
+        false);
+
+    if (mpi_rank == 0)
+    {
+        if (!std::filesystem::exists("../mesh/"))
+            std::filesystem::create_directories("../mesh/");
+
+        const std::string mesh_file_name =
+            "../mesh/rectangle-simplices-" + std::to_string(N_el.first) + "x" +
+            std::to_string(N_el.second) + "-" + clean_double(geometry.first[0], 2) +
+            "_" + clean_double(geometry.second[0], 2) + "x" +
+            clean_double(geometry.first[1], 2) + "_" + clean_double(geometry.second[1], 2) + ".vtk";
+
+        GridOut grid_out;
+        std::ofstream grid_out_file(mesh_file_name);
+        grid_out.write_vtk(mesh_serial, grid_out_file);
+        pcout << "  Mesh saved to " << mesh_file_name << std::endl;
+    }
+
+    GridTools::partition_triangulation(mpi_size, mesh_serial);
+    const auto construction_data =
+        TriangulationDescription::Utilities::create_description_from_triangulation(
+            mesh_serial, MPI_COMM_WORLD);
+    mesh.create_triangulation(construction_data);
+
+    pcout << "  Number of elements = " << mesh.n_global_active_cells() << std::endl;
+}
+
+void WaveEquationBase::setup_fe()
+{
+    pcout << "Initializing the finite element space" << std::endl;
+
+    fe = std::make_unique<FE_SimplexP<dim>>(r);
+    pcout << "  Degree                     = " << fe->degree << std::endl;
+    pcout << "  DoFs per cell              = " << fe->dofs_per_cell << std::endl;
+
+    quadrature = std::make_unique<QGaussSimplex<dim>>(r + 1);
+    pcout << "  Quadrature points per cell = " << quadrature->size() << std::endl;
+}
+
+void WaveEquationBase::setup_dof_handler()
+{
+    pcout << "Initializing the DoF handler" << std::endl;
+
+    dof_handler.reinit(mesh);
+    dof_handler.distribute_dofs(*fe);
+
+    pcout << "  Number of DoFs = " << dof_handler.n_dofs() << std::endl;
+}
+
+void WaveEquationBase::prepare_output_filename(const std::string& method_params)
+{
+    output_folder = "../results/" + problem_name + "/run-R" + std::to_string(r) +
+                    "-N" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
+                    "-dt" + clean_double(delta_t) + method_params + "/";
+
+    if (mpi_rank == 0)
+    {
+        if (!std::filesystem::exists(output_folder))
+            std::filesystem::create_directories(output_folder);
+
+        energy_log_file.open(output_folder + "energy.csv");
+        if (energy_log_file.is_open())
+            energy_log_file << "timestep,time,energy" << std::endl;
+
+        if (exact_solution != nullptr)
+        {
+            error_log_file.open(output_folder + "error.csv");
+            if (error_log_file.is_open())
+                error_log_file << "timestep,time,L2_error,H1_error,rel_L2_error,rel_H1_error" << std::endl;
+
+            std::string convergence_file_path = "../results/" + problem_name + "/convergence.csv";
+            bool file_exists = std::filesystem::exists(convergence_file_path);
+            convergence_file.open(convergence_file_path, std::ios_base::app);
+            if (convergence_file.is_open() && !file_exists)
+                convergence_file << "h,N_el_x,N_el_y,r,dt,T,method,rel_L2_error_avg,rel_H1_error_avg" << std::endl;
+        }
+    }
+}
+
+void WaveEquationBase::compute_and_log_energy()
+{
+    TrilinosWrappers::MPI::Vector tmp_u(solution_u);
+    TrilinosWrappers::MPI::Vector tmp_v(solution_v);
+    stiffness_matrix.vmult(tmp_u, solution_u);
+    mass_matrix.vmult(tmp_v, solution_v);
+    current_energy = 0.5 * (tmp_v * solution_v + tmp_u * solution_u);
+
+    if (mpi_rank == 0 && energy_log_file.is_open())
+        energy_log_file << timestep_number << "," << time << "," << current_energy << std::endl;
+}
+
+void WaveEquationBase::compute_and_log_error()
+{
+    if (exact_solution == nullptr)
+        return;
+
+    exact_solution->set_time(time);
+
+    const double error_L2 = compute_error(VectorTools::L2_norm, *exact_solution);
+    const double error_H1 = compute_error(VectorTools::H1_norm, *exact_solution);
+    const double rel_error_L2 = compute_relative_error(VectorTools::L2_norm, *exact_solution);
+    const double rel_error_H1 = compute_relative_error(VectorTools::H1_norm, *exact_solution);
+
+    if (mpi_rank == 0 && error_log_file.is_open())
+    {
+        error_log_file << timestep_number << "," << time << ","
+                       << std::scientific << std::setprecision(6)
+                       << error_L2 << "," << error_H1 << ","
+                       << rel_error_L2 << "," << rel_error_H1 << std::endl;
+    }
+
+    accumulated_L2_error += rel_error_L2;
+    accumulated_H1_error += rel_error_H1;
+    error_sample_count++;
+}
+
+void WaveEquationBase::compute_final_errors()
+{
+    if (exact_solution == nullptr || error_sample_count == 0)
+        return;
+
+    const double avg_L2_error = accumulated_L2_error / error_sample_count;
+    const double avg_H1_error = accumulated_H1_error / error_sample_count;
+
+    if (mpi_rank == 0 && convergence_file.is_open())
+    {
+        const double h = 1.0 / std::sqrt(N_el.first * N_el.second);
+        convergence_file << h << "," << N_el.first << "," << N_el.second << "," << r << ","
+                         << delta_t << "," << T << "," << problem_name << ","
+                         << std::scientific << std::setprecision(6)
+                         << avg_L2_error << "," << avg_H1_error << std::endl;
+
+        pcout << "Average errors over time:" << std::endl;
+        pcout << "  Average Relative L2 error  = " << avg_L2_error << std::endl;
+        pcout << "  Average Relative H1 error  = " << avg_H1_error << std::endl;
+    }
+}
+
+void WaveEquationBase::print_step_info()
+{
+    std::ostringstream oss;
+    oss << "Step " << std::setw(6) << timestep_number
+        << ",  t=" << std::scientific << std::setprecision(3) << std::setw(9) << time
+        << ",  ||u||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_u.l2_norm()
+        << ",  ||v||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_v.l2_norm()
+        << ",  E=" << std::scientific << std::setprecision(3) << std::setw(9) << current_energy;
+    pcout << oss.str() << std::endl;
+}
+
+void WaveEquationBase::output() const
+{
+    DataOut<dim> data_out;
+    data_out.add_data_vector(dof_handler, solution_u, "u");
+    data_out.add_data_vector(dof_handler, solution_v, "v");
+
+    std::vector<unsigned int> partition_int(mesh.n_active_cells());
+    GridTools::get_subdomain_association(mesh, partition_int);
+    const Vector<double> partitioning(partition_int.begin(), partition_int.end());
+    data_out.add_data_vector(partitioning, "partitioning");
+
+    data_out.build_patches();
+    data_out.write_vtu_with_pvtu_record(output_folder, "solution", timestep_number,
+                                        MPI_COMM_WORLD, 4, static_cast<long int>(time));
+}
+
+double WaveEquationBase::compute_error(const VectorTools::NormType& norm_type,
+                                       const Function<dim>& exact_solution) const
+{
+    const QGaussSimplex<dim> quadrature_error(r + 2);
+    FE_SimplexP<dim> fe_linear(1);
+    MappingFE mapping(fe_linear);
+
+    Vector<double> error_per_cell(mesh.n_active_cells());
+    VectorTools::integrate_difference(mapping, dof_handler, solution_u,
+                                      exact_solution, error_per_cell,
+                                      quadrature_error, norm_type);
+
+    return VectorTools::compute_global_error(mesh, error_per_cell, norm_type);
+}
+
+double WaveEquationBase::compute_relative_error(const VectorTools::NormType& norm_type,
+                                                const Function<dim>& exact_solution) const
+{
+    const double error = compute_error(norm_type, exact_solution);
+
+    const QGaussSimplex<dim> quadrature_error(r + 2);
+    FE_SimplexP<dim> fe_linear(1);
+    MappingFE mapping(fe_linear);
+
+    TrilinosWrappers::MPI::Vector zero_vector(dof_handler.locally_owned_dofs(), MPI_COMM_WORLD);
+    zero_vector = 0.0;
+
+    Vector<double> exact_per_cell(mesh.n_active_cells());
+    VectorTools::integrate_difference(mapping, dof_handler, zero_vector,
+                                      exact_solution, exact_per_cell,
+                                      quadrature_error, norm_type);
+
+    const double exact_norm = VectorTools::compute_global_error(mesh, exact_per_cell, norm_type);
+
+    if (exact_norm < 1e-14)
+        return error;
+
+    return error / exact_norm;
+}
+
+std::string clean_double(double x, int precision)
+{
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(precision) << x;
+    std::string s = out.str();
+    std::replace(s.begin(), s.end(), '.', '_');
+    while (!s.empty() && (s.back() == '0' || s.back() == '_'))
+        s.pop_back();
+    return s.empty() ? "0" : s;
+}

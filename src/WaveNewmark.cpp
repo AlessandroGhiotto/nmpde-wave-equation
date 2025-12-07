@@ -4,101 +4,31 @@ void WaveNewmark::setup()
 {
     pcout << "===============================================" << std::endl;
 
-    // Create the mesh.
-    {
-        pcout << "Initializing the mesh" << std::endl;
-
-        // Build the mesh in serial, then distribute to MPI ranks.
-        Triangulation<dim> mesh_serial;
-
-        // 'subdivided_hyper_rectangle_with_simplices': rectangles cut along diagonal
-        // so we keep Simplex finite elements
-        GridGenerator::subdivided_hyper_rectangle_with_simplices(
-            mesh_serial,
-            { N_el.first, N_el.second },
-            geometry.first, geometry.second,
-            false // we have Dirichlet BCs everywhere so we don't need to name the boundaries
-        );
-
-        // Save the mesh to a file
-        if (mpi_rank == 0)
-        {
-
-            if (!std::filesystem::exists("../mesh/"))
-            {
-                std::filesystem::create_directories("../mesh/");
-            }
-            const std::string mesh_file_name =
-                "../mesh/rectangle-simplices-" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
-                "-" + clean_double(geometry.first[0], 2) + "_" + clean_double(geometry.second[0], 2) + "x" +
-                clean_double(geometry.first[1], 2) + "_" + clean_double(geometry.second[1], 2) + ".vtk";
-
-            GridOut grid_out;
-            std::ofstream grid_out_file(mesh_file_name);
-            grid_out.write_vtk(mesh_serial, grid_out_file);
-            pcout << "  Mesh saved to " << mesh_file_name << std::endl;
-        }
-
-        // Partition and create the distributed triangulation from the serial one.
-        GridTools::partition_triangulation(mpi_size, mesh_serial);
-        const auto construction_data =
-            TriangulationDescription::Utilities::
-                create_description_from_triangulation(mesh_serial, MPI_COMM_WORLD);
-        mesh.create_triangulation(construction_data);
-
-        pcout << "  Number of elements = " << mesh.n_global_active_cells()
-              << std::endl;
-    }
-
+    // Use base class methods
+    setup_mesh();
     pcout << "-----------------------------------------------" << std::endl;
 
-    // Initialize the finite element space.
-    {
-        pcout << "Initializing the finite element space" << std::endl;
-
-        fe = std::make_unique<FE_SimplexP<dim>>(r);
-
-        pcout << "  Degree                     = " << fe->degree << std::endl;
-        pcout << "  DoFs per cell              = " << fe->dofs_per_cell
-              << std::endl;
-
-        quadrature = std::make_unique<QGaussSimplex<dim>>(r + 1);
-
-        pcout << "  Quadrature points per cell = " << quadrature->size()
-              << std::endl;
-    }
-
+    setup_fe();
     pcout << "-----------------------------------------------" << std::endl;
 
-    // Initialize the DoF handler.
-    {
-        pcout << "Initializing the DoF handler" << std::endl;
-
-        dof_handler.reinit(mesh);
-        dof_handler.distribute_dofs(*fe);
-
-        pcout << "  Number of DoFs = " << dof_handler.n_dofs() << std::endl;
-    }
-
+    setup_dof_handler();
     pcout << "-----------------------------------------------" << std::endl;
 
-    // Initialize the linear system.
+    // Initialize the linear system
     {
         pcout << "Initializing the linear system" << std::endl;
 
         const IndexSet locally_owned_dofs = dof_handler.locally_owned_dofs();
-        const IndexSet locally_relevant_dofs =
-            DoFTools::extract_locally_relevant_dofs(dof_handler);
 
         pcout << "  Initializing the sparsity pattern" << std::endl;
-        TrilinosWrappers::SparsityPattern sparsity(locally_owned_dofs,
-                                                   MPI_COMM_WORLD);
+        TrilinosWrappers::SparsityPattern sparsity(locally_owned_dofs, MPI_COMM_WORLD);
         DoFTools::make_sparsity_pattern(dof_handler, sparsity);
         sparsity.compress();
 
         pcout << "  Initializing matrices" << std::endl;
-        mass_matrix.reinit(sparsity);      // M
-        stiffness_matrix.reinit(sparsity); // A
+        mass_matrix.reinit(sparsity);
+        stiffness_matrix.reinit(sparsity);
+        matrix_a.reinit(sparsity);
 
         pcout << "  Initializing vectors" << std::endl;
         solution_u.reinit(locally_owned_dofs, MPI_COMM_WORLD);
@@ -110,11 +40,8 @@ void WaveNewmark::setup()
         system_rhs.reinit(locally_owned_dofs, MPI_COMM_WORLD);
 
         pcout << "Setup complete!" << std::endl;
-        pcout << "-----------------------------------------------" << std::endl;
     }
 }
-
-// Assembling mass and stiffness matrices
 
 void WaveNewmark::assemble_matrices()
 {
@@ -123,14 +50,12 @@ void WaveNewmark::assemble_matrices()
     const unsigned int dofs_per_cell = fe->dofs_per_cell;
     const unsigned int n_q = quadrature->size();
 
-    FEValues<dim> fe_values(*fe,
-                            *quadrature,
+    FEValues<dim> fe_values(*fe, *quadrature,
                             update_values | update_gradients |
                                 update_quadrature_points | update_JxW_values);
 
     FullMatrix<double> cell_mass(dofs_per_cell, dofs_per_cell);
     FullMatrix<double> cell_stiffness(dofs_per_cell, dofs_per_cell);
-
     std::vector<types::global_dof_index> dof_indices(dofs_per_cell);
 
     mass_matrix = 0.0;
@@ -142,7 +67,6 @@ void WaveNewmark::assemble_matrices()
             continue;
 
         fe_values.reinit(cell);
-
         cell_mass = 0.0;
         cell_stiffness = 0.0;
 
@@ -166,7 +90,6 @@ void WaveNewmark::assemble_matrices()
         }
 
         cell->get_dof_indices(dof_indices);
-
         mass_matrix.add(dof_indices, cell_mass);
         stiffness_matrix.add(dof_indices, cell_stiffness);
     }
@@ -174,14 +97,14 @@ void WaveNewmark::assemble_matrices()
     mass_matrix.compress(VectorOperation::add);
     stiffness_matrix.compress(VectorOperation::add);
 
-    // Matrix for a linear system
+    // Matrix for a linear system: M + Δt^2 β A
     matrix_a.copy_from(mass_matrix);
-    matrix_a.add(beta * delta_t * delta_t, stiffness_matrix); // M + Δt^2 beta A
+    matrix_a.add(beta * delta_t * delta_t, stiffness_matrix);
 }
 
 void WaveNewmark::assemble_rhs()
 {
-    // Assembling RHS for (M + dt^2 * beta * A) a^{n+1} = f^{n+1} - A z
+    // RHS for (M + dt^2 * beta * A) a^{n+1} = f^{n+1} - A z
     // where z = u^n + dt v^n + dt^2 (0.5 - beta) a^n
 
     system_rhs = 0.0;
@@ -195,10 +118,10 @@ void WaveNewmark::assemble_rhs()
     TrilinosWrappers::MPI::Vector w(system_rhs);
     stiffness_matrix.vmult(w, z);
 
-    // RHS = f^{n+1} - w
+    // RHS = -w
     system_rhs.add(-1.0, w);
 
-    // Assemble load vector for f^{n+1}
+    // Add forcing term f^{n+1}
     const unsigned int dofs_per_cell = fe->dofs_per_cell;
     const unsigned int n_q = quadrature->size();
 
@@ -211,7 +134,6 @@ void WaveNewmark::assemble_rhs()
     TrilinosWrappers::MPI::Vector rhs_f(system_rhs);
     rhs_f = 0.0;
 
-    // Set time for forcing once per cell (no need to set per quadrature point)
     f.set_time(time + delta_t);
 
     for (const auto& cell : dof_handler.active_cell_iterators())
@@ -226,7 +148,6 @@ void WaveNewmark::assemble_rhs()
         {
             const double JxW = fe_values.JxW(q);
             const Point<dim>& x_q = fe_values.quadrature_point(q);
-
             const double f_np1 = f.value(x_q);
 
             for (unsigned int i = 0; i < dofs_per_cell; ++i)
@@ -243,39 +164,26 @@ void WaveNewmark::assemble_rhs()
 
 void WaveNewmark::apply_dirichlet_bc()
 {
-    // === Apply u = g(t) on the boundary ===
+    // Apply u = g(t) on the boundary
     std::map<types::global_dof_index, double> boundary_values_u;
-    g.set_time(time); // your Function<dim> g(...)
+    g.set_time(time);
 
     for (const auto id : mesh.get_boundary_ids())
-        VectorTools::interpolate_boundary_values(dof_handler,
-                                                 id,
-                                                 g,
-                                                 boundary_values_u);
+        VectorTools::interpolate_boundary_values(dof_handler, id, g, boundary_values_u);
 
-    // We don't care about the matrix here, we just rewrite the vector.
     TrilinosWrappers::MPI::Vector dummy_rhs;
-    MatrixTools::apply_boundary_values(boundary_values_u,
-                                       mass_matrix, // dummy
-                                       solution_u,
-                                       dummy_rhs,
-                                       false); // do NOT eliminate rows
+    MatrixTools::apply_boundary_values(boundary_values_u, mass_matrix,
+                                       solution_u, dummy_rhs, false);
 
-    // === Apply v = dg/dt (t) on the boundary ===
+    // Apply v = dg/dt(t) on the boundary
     std::map<types::global_dof_index, double> boundary_values_v;
-    dgdt.set_time(time); // your Function<dim> dgdt(...)
+    dgdt.set_time(time);
 
     for (const auto id : mesh.get_boundary_ids())
-        VectorTools::interpolate_boundary_values(dof_handler,
-                                                 id,
-                                                 dgdt,
-                                                 boundary_values_v);
+        VectorTools::interpolate_boundary_values(dof_handler, id, dgdt, boundary_values_v);
 
-    MatrixTools::apply_boundary_values(boundary_values_v,
-                                       mass_matrix, // dummy
-                                       solution_v,
-                                       dummy_rhs,
-                                       false);
+    MatrixTools::apply_boundary_values(boundary_values_v, mass_matrix,
+                                       solution_v, dummy_rhs, false);
 }
 
 void WaveNewmark::solve_a()
@@ -295,61 +203,25 @@ void WaveNewmark::update_u_v()
     // u^{n+1} = u^n + dt v^n + dt^2 [(0.5 - beta) a^n + beta a^{n+1}]
     // v^{n+1} = v^n + dt [(1 - gamma) a^n + gamma a^{n+1}]
 
-    // update u
-    solution_u = old_solution_u;                                      // u^{n+1} <-- u^n
-    solution_u.add(delta_t, old_solution_v);                          // + dt v^n
-    solution_u.add(delta_t * delta_t * (0.5 - beta), old_solution_a); // + dt^2 (0.5 - beta) a^n
-    solution_u.add(delta_t * delta_t * beta, solution_a);             // + dt^2 beta a^{n+1}
+    solution_u = old_solution_u;
+    solution_u.add(delta_t, old_solution_v);
+    solution_u.add(delta_t * delta_t * (0.5 - beta), old_solution_a);
+    solution_u.add(delta_t * delta_t * beta, solution_a);
 
-    // update v
-    solution_v = old_solution_v;                             // v^{n+1} <-- v^n
-    solution_v.add(delta_t * (1.0 - gamma), old_solution_a); // + dt (1 - gamma) a^n
-    solution_v.add(delta_t * gamma, solution_a);             // + dt gamma a^{n+1}
-}
-
-void WaveNewmark::prepare_output_filename()
-{
-    output_folder = "../results/" + problem_name + "/run-R" + std::to_string(r) +
-                    "-N" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
-                    "-dt" + clean_double(delta_t) +
-                    "-gamma" + clean_double(gamma) +
-                    "-beta" + clean_double(beta) + "/";
-
-    if (!std::filesystem::exists(output_folder))
-    {
-        std::filesystem::create_directories(output_folder);
-    }
-}
-
-void WaveNewmark::output() const
-{
-    DataOut<dim> data_out;
-
-    data_out.add_data_vector(dof_handler, solution_u, "u");
-    data_out.add_data_vector(dof_handler, solution_v, "v");
-    data_out.add_data_vector(dof_handler, solution_a, "a");
-
-    // Add vector for parallel partition.
-    std::vector<unsigned int> partition_int(mesh.n_active_cells());
-    GridTools::get_subdomain_association(mesh, partition_int);
-    const Vector<double> partitioning(partition_int.begin(), partition_int.end());
-    data_out.add_data_vector(partitioning, "partitioning");
-
-    data_out.build_patches();
-
-    data_out.write_vtu_with_pvtu_record(/* folder = */ output_folder,
-                                        /* basename = */ "solution",
-                                        /* index = */ timestep_number,
-                                        MPI_COMM_WORLD,
-                                        /* n<_digits = */ 4,
-                                        /* time = */ static_cast<long int>(time));
+    solution_v = old_solution_v;
+    solution_v.add(delta_t * (1.0 - gamma), old_solution_a);
+    solution_v.add(delta_t * gamma, solution_a);
 }
 
 void WaveNewmark::run()
 {
     setup();
     assemble_matrices();
-    prepare_output_filename();
+
+    // Call base class method with Newmark-specific parameters
+    std::string method_params = "-gamma" + clean_double(gamma) +
+                                "-beta" + clean_double(beta);
+    prepare_output_filename(method_params);
 
     pcout << "Setting initial conditions..." << std::endl;
 
@@ -358,6 +230,8 @@ void WaveNewmark::run()
 
     solution_u = old_solution_u;
     solution_v = old_solution_v;
+    solution_a = 0.0;
+    old_solution_a = 0.0;
 
     pcout << "||u0|| = " << old_solution_u.l2_norm() << std::endl;
     pcout << "||v0|| = " << old_solution_v.l2_norm() << std::endl;
@@ -367,41 +241,29 @@ void WaveNewmark::run()
     timestep_number = 0;
     time = 0.0;
 
-    // Configure concise logging/output interval
-    const unsigned int log_every = 10; // change as needed
-
     while (time < T)
     {
         time += delta_t;
         ++timestep_number;
 
-        // compute a
         assemble_rhs();
         solve_a();
-
-        // update u, v
         update_u_v();
-
-        // Enforce the displacement and velocity BCs
         apply_dirichlet_bc();
 
         old_solution_u = solution_u;
         old_solution_v = solution_v;
         old_solution_a = solution_a;
 
-        // Concise log every n steps
         if (timestep_number % log_every == 0)
         {
-            const auto rhs_norm = system_rhs.l2_norm();
-            const auto a_norm = solution_a.l2_norm();
+            compute_and_log_energy();
+            compute_and_log_error();
+        }
 
-            std::ostringstream oss;
-            oss << "Step " << std::setw(6) << timestep_number
-                << ",  t=" << std::scientific << std::setprecision(3) << std::setw(9) << time
-                << ",  ||rhs||=" << std::scientific << std::setprecision(3) << std::setw(9) << rhs_norm
-                << ",  ||a||=" << std::scientific << std::setprecision(3) << std::setw(9) << a_norm;
-
-            pcout << oss.str() << std::endl;
+        if (timestep_number % print_every == 0)
+        {
+            print_step_info();
         }
 
         output();
@@ -409,46 +271,17 @@ void WaveNewmark::run()
 
     pcout << "\nSimulation completed: " << timestep_number
           << " steps, final time t = " << time << std::endl;
-}
 
-double
-WaveNewmark::compute_error(const VectorTools::NormType& norm_type,
-                           const Function<dim>& exact_solution) const
-{
-    const QGaussSimplex<dim> quadrature_error(r + 2);
+    compute_final_errors();
 
-    FE_SimplexP<dim> fe_linear(1);
-    MappingFE mapping(fe_linear);
-
-    Vector<double> error_per_cell(mesh.n_active_cells());
-    VectorTools::integrate_difference(mapping,
-                                      dof_handler,
-                                      solution_u,
-                                      exact_solution,
-                                      error_per_cell,
-                                      quadrature_error,
-                                      norm_type);
-
-    const double error =
-        VectorTools::compute_global_error(mesh, error_per_cell, norm_type);
-
-    return error;
-}
-
-// Helper function to create clean filenames from double values
-
-std::string clean_double(double x, int precision)
-{
-    std::ostringstream out;
-    out << std::fixed << std::setprecision(precision) << x;
-    std::string s = out.str();
-
-    // Replace dot
-    std::replace(s.begin(), s.end(), '.', '_');
-
-    // Remove trailing zeros and underscore if needed
-    while (!s.empty() && (s.back() == '0' || s.back() == '_'))
-        s.pop_back();
-
-    return s.empty() ? "0" : s;
+    // Close log files
+    if (mpi_rank == 0)
+    {
+        if (energy_log_file.is_open())
+            energy_log_file.close();
+        if (error_log_file.is_open())
+            error_log_file.close();
+        if (convergence_file.is_open())
+            convergence_file.close();
+    }
 }

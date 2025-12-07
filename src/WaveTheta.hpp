@@ -1,56 +1,18 @@
 #ifndef WAVE_THETA_HPP
 #define WAVE_THETA_HPP
 
-#include <deal.II/base/conditional_ostream.h>
-#include <deal.II/base/quadrature_lib.h>
-
-#include <deal.II/distributed/fully_distributed_tria.h>
-
-#include <deal.II/dofs/dof_handler.h>
-#include <deal.II/dofs/dof_tools.h>
-
-#include <deal.II/fe/fe_simplex_p.h>
-#include <deal.II/fe/fe_values.h>
-#include <deal.II/fe/mapping_fe.h>
-
-#include <deal.II/grid/grid_generator.h>
-#include <deal.II/grid/grid_in.h>
-#include <deal.II/grid/grid_out.h>
-#include <deal.II/grid/grid_tools.h>
-#include <deal.II/grid/tria.h>
-
+#include "WaveEquationBase.hpp"
 #include <deal.II/lac/solver_cg.h>
-#include <deal.II/lac/solver_gmres.h>
-#include <deal.II/lac/trilinos_precondition.h>
-#include <deal.II/lac/trilinos_sparse_matrix.h>
-#include <deal.II/lac/vector.h>
-
-#include <deal.II/numerics/data_out.h>
-#include <deal.II/numerics/matrix_tools.h>
-#include <deal.II/numerics/vector_tools.h>
-
-#include <filesystem>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
 
 using namespace dealii;
 
-// Forward declaration so Wave can use DirichletCondition<dim>
-// template <int dim>
-// class DirichletCondition;
-
 /**
- * Class managing the differential problem.
+ * Class managing the wave equation with theta-method time discretization.
  */
-class WaveTheta
+class WaveTheta : public WaveEquationBase
 {
   public:
-    // Physical dimension (1D, 2D, 3D)
-    static constexpr unsigned int dim = 2;
-
-    // Constructor.
-    // NOTE: we can't make const function depending on the time
+    // Constructor
     WaveTheta(const std::string& problem_name_,
               const std::pair<unsigned int, unsigned int>& N_el_,
               const std::pair<Point<dim>, Point<dim>>& geometry_,
@@ -64,161 +26,36 @@ class WaveTheta
               const Function<dim>& v0_,
               Function<dim>& g_,
               Function<dim>& dgdt_,
-              const unsigned int log_every_ = 1,
+              const unsigned int log_every_ = 10,
               const unsigned int print_every_ = 10,
-              Function<dim>* exact_solution_ = nullptr // we use pointer instead of references because they allows the nullptr
-              )
-        : problem_name(problem_name_), N_el(N_el_), geometry(geometry_), r(r_), T(T_), theta(theta_), delta_t(delta_t_), c(c_), f(f_), u0(u0_), v0(v0_), g(g_), dgdt(dgdt_),
-          log_every(log_every_), print_every(print_every_), exact_solution(exact_solution_),
-          mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)), mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)), mesh(MPI_COMM_WORLD), pcout(std::cout, mpi_rank == 0)
+              Function<dim>* exact_solution_ = nullptr)
+        : WaveEquationBase(problem_name_, N_el_, geometry_, r_, T_, delta_t_,
+                           c_, f_, u0_, v0_, g_, dgdt_, log_every_, print_every_, exact_solution_),
+          theta(theta_)
     {
     }
 
-    // Run the time-dependent simulation.
-    void
-    run();
+    // Run the time-dependent simulation (implements pure virtual)
+    void run() override;
 
   protected:
-    // Initialization.
-    void
-    setup();
-
-    // Assembly of matrices (mass and laplace)
-    void
-    assemble_matrices();
-
-    // Assembly rhs
-    void
-    assemble_rhs_u();
-    void
-    assemble_rhs_v();
-
-    // System solution.
+    // Theta-specific methods
+    void setup();
+    void assemble_matrices();
+    void assemble_rhs_u();
+    void assemble_rhs_v();
     void solve_u();
     void solve_v();
 
-    // logging and printing
-    void prepare_output_filename();
-    void compute_and_log_energy();
-    void print_step_info();
-    void compute_and_log_error();
-    void compute_final_errors();
-
-    // compute error
-    double
-    compute_error(const VectorTools::NormType&,
-                  const Function<dim>&) const;
-
-    double
-    compute_relative_error(const VectorTools::NormType&,
-                           const Function<dim>&) const;
-
-    // Output.
-    void
-    output() const;
-
-    // Name of the problem and output folder
-    const std::string problem_name;
-    std::string output_folder;
-    std::ofstream energy_log_file;
-    std::ofstream error_log_file;
-    std::ofstream convergence_file;
-
-    // Number of elements in x and y directions.
-    std::pair<unsigned int, unsigned int> N_el;
-
-    // Geometry of the domain
-    const std::pair<Point<dim>, Point<dim>> geometry;
-
-    // Polynomial degree.
-    const unsigned int r;
-
-    // Final time.
-    const double T;
-
-    // Theta parameter for the theta method.
+    // Theta parameter for the theta method
     const double theta;
 
-    // Time step.
-    const double delta_t;
-
-    // Current time.
-    double time = 0.0;
-
-    // Current timestep number.
-    unsigned int timestep_number = 0;
-
-    // energy
-    double current_energy;
-
-    // error accumulators
-    double accumulated_L2_error = 0.0;
-    double accumulated_H1_error = 0.0;
-    unsigned int error_sample_count = 0;
-
-    // wave speed
-    const Function<dim>& c;
-
-    // Forcing term f(x,t)
-    Function<dim>& f;
-
-    // Initial conditions
-    const Function<dim>& u0;
-
-    const Function<dim>& v0;
-
-    // boundary value for u
-    Function<dim>& g;
-
-    // boundary value for v (= dg/dt)
-    Function<dim>& dgdt;
-
-    const unsigned int log_every;   // Log every timestep
-    const unsigned int print_every; // Print every timestep
-
-    // Exact solution for error computation (optional)
-    Function<dim>* exact_solution;
-
-    // Number of MPI processes.
-    const unsigned int mpi_size;
-
-    // Rank of the current MPI process.
-    const unsigned int mpi_rank;
-
-    // Triangulation.
-    parallel::fullydistributed::Triangulation<dim> mesh;
-
-    // Finite element space.
-    std::unique_ptr<FiniteElement<dim>> fe;
-
-    // Quadrature formula.
-    std::unique_ptr<Quadrature<dim>> quadrature;
-
-    // DoF handler.
-    DoFHandler<dim> dof_handler;
-
-    // Mass and stiffness matrices
-    TrilinosWrappers::SparseMatrix mass_matrix;
-    TrilinosWrappers::SparseMatrix stiffness_matrix;
-
-    // System matrices
+    // System matrices (specific to theta-method)
     TrilinosWrappers::SparseMatrix matrix_u;
     TrilinosWrappers::SparseMatrix matrix_v;
-
-    // System right-hand side.
-    TrilinosWrappers::MPI::Vector system_rhs;
-
-    // Solution vectors with ghost elements
-    TrilinosWrappers::MPI::Vector solution_u, solution_v;
-    TrilinosWrappers::MPI::Vector old_solution_u, old_solution_v;
-
-    // Output stream for process 0.
-    ConditionalOStream pcout;
 };
 
-// Equation Data
-
-// Wave speed function
+// Equation Data (keep existing template classes)
 template <int dim>
 class WaveSpeed : public Function<dim>
 {
@@ -304,7 +141,5 @@ class BoundaryValuesV : public Function<dim>
             return 0;
     }
 };
-
-std::string clean_double(double, int precision = 6);
 
 #endif
