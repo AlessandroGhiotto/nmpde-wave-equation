@@ -20,6 +20,23 @@ void WaveTheta::setup()
             false // we have Dirichlet BCs everywhere so we don't need to name the boundaries
         );
 
+        // Save the mesh to a file
+        {
+            if (!std::filesystem::exists("../mesh/"))
+            {
+                std::filesystem::create_directories("../mesh/");
+            }
+            const std::string mesh_file_name =
+                "../mesh/rectangle-simplices-" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
+                "-" + clean_double(geometry.first[0], 2) + "_" + clean_double(geometry.second[0], 2) + "x" +
+                clean_double(geometry.first[1], 2) + "_" + clean_double(geometry.second[1], 2) + ".vtk";
+
+            GridOut grid_out;
+            std::ofstream grid_out_file(mesh_file_name);
+            grid_out.write_vtk(mesh_serial, grid_out_file);
+            std::cout << "  Mesh saved to " << mesh_file_name << std::endl;
+        }
+
         // Partition and create the distributed triangulation from the serial one.
         GridTools::partition_triangulation(mpi_size, mesh_serial);
         const auto construction_data =

@@ -22,6 +22,10 @@ void WaveNewmark::setup()
 
         // Save the mesh to a file
         {
+            if (!std::filesystem::exists("../mesh/"))
+            {
+                std::filesystem::create_directories("../mesh/");
+            }
             const std::string mesh_file_name =
                 "../mesh/rectangle-simplices-" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
                 "-" + clean_double(geometry.first[0], 2) + "_" + clean_double(geometry.second[0], 2) + "x" +
