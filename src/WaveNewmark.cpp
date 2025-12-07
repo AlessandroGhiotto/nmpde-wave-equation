@@ -21,7 +21,9 @@ void WaveNewmark::setup()
         );
 
         // Save the mesh to a file
+        if (mpi_rank == 0)
         {
+
             if (!std::filesystem::exists("../mesh/"))
             {
                 std::filesystem::create_directories("../mesh/");
@@ -34,7 +36,7 @@ void WaveNewmark::setup()
             GridOut grid_out;
             std::ofstream grid_out_file(mesh_file_name);
             grid_out.write_vtk(mesh_serial, grid_out_file);
-            std::cout << "  Mesh saved to " << mesh_file_name << std::endl;
+            pcout << "  Mesh saved to " << mesh_file_name << std::endl;
         }
 
         // Partition and create the distributed triangulation from the serial one.

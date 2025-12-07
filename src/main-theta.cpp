@@ -34,13 +34,15 @@ int main(int argc, char* argv[])
     FunctionParser<dim> g;
     FunctionParser<dim> dgdt; // derivative of g over time
 
-    std::vector<std::string> function_names { "C", "F", "U0", "V0", "G", "DGDT" };
+    FunctionParser<dim> exact_solution;
+
+    std::vector<std::string> function_names { "C", "F", "U0", "V0", "G", "DGDT", "Solution" };
     param.declare(function_names);
 
     try
     {
         param.parse(parameters_file);
-        param.load_functions(function_names, { &c, &f, &u0, &v0, &g, &dgdt });
+        param.load_functions(function_names, { &c, &f, &u0, &v0, &g, &dgdt, &exact_solution });
 
         // Minimal debug output
         pcout << "Parsed parameters:" << std::endl;
@@ -64,6 +66,22 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    // Check if exact_solution was initialized if not set it to nullptr
+    Function<dim>* exact_solution_ptr = nullptr;
+    try
+    {
+        prm.enter_subsection("Solution");
+        if (!prm.get("Function expression").empty())
+        {
+            exact_solution_ptr = &exact_solution;
+        }
+        prm.leave_subsection();
+    }
+    catch (...)
+    {
+        // If subsection doesn't exist, exact_solution_ptr remains nullptr
+    }
+
     try
     {
         WaveTheta problem(
@@ -79,7 +97,10 @@ int main(int argc, char* argv[])
             /* initial u */ u0,
             /* initial v */ v0,
             /* u boundary cond */ g,
-            /* v buondary cond */ dgdt);
+            /* v buondary cond */ dgdt,
+            /* log every */ prm.get_integer("Log Every"),
+            /* print every */ prm.get_integer("Print Every"),
+            /* exact solution */ exact_solution_ptr);
 
         problem.run();
     }

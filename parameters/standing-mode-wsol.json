@@ -1,7 +1,7 @@
 {
 	"Geometry": "[0.0, 1.0] x [0.0, 1.0]",
-	"Nel": "80",
-	"R": "1",
+	"Nel": "160",
+	"R": "2",
 	"T": "2.0",
 	"Theta": "0.5",
 	"Beta": "0.25",
@@ -35,6 +35,11 @@
 	"DGDT": {
 		"Function constants": "",
 		"Function expression": "0.0",
+		"Variable names": "x, y, t"
+	},
+	"Solution": {
+		"Function constants": "",
+		"Function expression": "cos(sqrt(2)*pi*t)*sin(pi*x)*sin(pi*y)",
 		"Variable names": "x, y, t"
 	}
 }

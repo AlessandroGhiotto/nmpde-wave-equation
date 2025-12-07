@@ -50,6 +50,7 @@ class WaveTheta
     static constexpr unsigned int dim = 2;
 
     // Constructor.
+    // NOTE: we can't make const function depending on the time
     WaveTheta(const std::string& problem_name_,
               const std::pair<unsigned int, unsigned int>& N_el_,
               const std::pair<Point<dim>, Point<dim>>& geometry_,
@@ -62,8 +63,13 @@ class WaveTheta
               const Function<dim>& u0_,
               const Function<dim>& v0_,
               Function<dim>& g_,
-              Function<dim>& dgdt_)
+              Function<dim>& dgdt_,
+              const unsigned int log_every_ = 1,
+              const unsigned int print_every_ = 10,
+              Function<dim>* exact_solution_ = nullptr // we use pointer instead of references because they allows the nullptr
+              )
         : problem_name(problem_name_), N_el(N_el_), geometry(geometry_), r(r_), T(T_), theta(theta_), delta_t(delta_t_), c(c_), f(f_), u0(u0_), v0(v0_), g(g_), dgdt(dgdt_),
+          log_every(log_every_), print_every(print_every_), exact_solution(exact_solution_),
           mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD)), mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)), mesh(MPI_COMM_WORLD), pcout(std::cout, mpi_rank == 0)
     {
     }
@@ -88,18 +94,24 @@ class WaveTheta
     assemble_rhs_v();
 
     // System solution.
-    void
-    solve_u();
-    void
-    solve_v();
+    void solve_u();
+    void solve_v();
 
-    // compute output filename
+    // logging and printing
     void prepare_output_filename();
+    void compute_and_log_energy();
+    void print_step_info();
+    void compute_and_log_error();
+    void compute_final_errors();
 
     // compute error
     double
     compute_error(const VectorTools::NormType&,
                   const Function<dim>&) const;
+
+    double
+    compute_relative_error(const VectorTools::NormType&,
+                           const Function<dim>&) const;
 
     // Output.
     void
@@ -108,6 +120,9 @@ class WaveTheta
     // Name of the problem and output folder
     const std::string problem_name;
     std::string output_folder;
+    std::ofstream energy_log_file;
+    std::ofstream error_log_file;
+    std::ofstream convergence_file;
 
     // Number of elements in x and y directions.
     std::pair<unsigned int, unsigned int> N_el;
@@ -133,6 +148,14 @@ class WaveTheta
     // Current timestep number.
     unsigned int timestep_number = 0;
 
+    // energy
+    double current_energy;
+
+    // error accumulators
+    double accumulated_L2_error = 0.0;
+    double accumulated_H1_error = 0.0;
+    unsigned int error_sample_count = 0;
+
     // wave speed
     const Function<dim>& c;
 
@@ -149,6 +172,12 @@ class WaveTheta
 
     // boundary value for v (= dg/dt)
     Function<dim>& dgdt;
+
+    const unsigned int log_every;   // Log every timestep
+    const unsigned int print_every; // Print every timestep
+
+    // Exact solution for error computation (optional)
+    Function<dim>* exact_solution;
 
     // Number of MPI processes.
     const unsigned int mpi_size;

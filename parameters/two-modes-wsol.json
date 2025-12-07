@@ -19,12 +19,12 @@
 	},
 	"U0": {
 		"Function constants": "A1=1.0, A2=0.7",
-		"Function expression": "A1*sin(2*pi*(3*x+y)) + A2*cos(2*pi*(x+4*y))",
+		"Function expression": "A1*sin(pi*x)*sin(2*pi*y) + A2*sin(2*pi*x)*sin(pi*y)",
 		"Variable names": "x, y"
 	},
 	"V0": {
 		"Function constants": "A1=1.0, A2=0.7",
-		"Function expression": "-2*pi*sqrt(10)*(A1*sin(2*pi*(3*x+y)) + 2*pi*sqrt(17)*A2*cos(2*pi*(x+4*y)))",
+		"Function expression": "0.0",
 		"Variable names": "x, y"
 	},
 	"G": {
@@ -35,6 +35,11 @@
 	"DGDT": {
 		"Function constants": "",
 		"Function expression": "0.0",
+		"Variable names": "x, y, t"
+	},
+	"Solution": {
+		"Function constants": "A1=1.0, A2=0.7",
+		"Function expression": "A1*cos(pi*sqrt(5)*t)*sin(pi*x)*sin(2*pi*y) + A2*cos(pi*sqrt(5)*t)*sin(2*pi*x)*sin(pi*y)",
 		"Variable names": "x, y, t"
 	}
 }

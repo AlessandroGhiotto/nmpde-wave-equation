@@ -21,6 +21,7 @@ void WaveTheta::setup()
         );
 
         // Save the mesh to a file
+        if (mpi_rank == 0)
         {
             if (!std::filesystem::exists("../mesh/"))
             {
@@ -34,7 +35,7 @@ void WaveTheta::setup()
             GridOut grid_out;
             std::ofstream grid_out_file(mesh_file_name);
             grid_out.write_vtk(mesh_serial, grid_out_file);
-            std::cout << "  Mesh saved to " << mesh_file_name << std::endl;
+            pcout << "  Mesh saved to " << mesh_file_name << std::endl;
         }
 
         // Partition and create the distributed triangulation from the serial one.
@@ -376,9 +377,105 @@ void WaveTheta::prepare_output_filename()
                     "-dt" + clean_double(delta_t) +
                     "-theta" + clean_double(theta) + "/";
 
-    if (!std::filesystem::exists(output_folder))
+    if (mpi_rank == 0)
     {
-        std::filesystem::create_directories(output_folder);
+        if (!std::filesystem::exists(output_folder))
+        {
+            std::filesystem::create_directories(output_folder);
+        }
+
+        // Open energy log file
+        energy_log_file.open(output_folder + "energy.csv");
+        if (energy_log_file.is_open())
+        {
+            energy_log_file << "timestep,time,energy" << std::endl;
+        }
+
+        // Open error log file (if exact solution provided)
+        if (exact_solution != nullptr)
+        {
+            error_log_file.open(output_folder + "error.csv");
+            if (error_log_file.is_open())
+            {
+                error_log_file << "timestep,time,L2_error,H1_error,rel_L2_error,rel_H1_error" << std::endl;
+            }
+
+            // Open convergence log file (append mode)
+            std::string convergence_file_path = "../results/" + problem_name + "/convergence.csv";
+            bool file_exists = std::filesystem::exists(convergence_file_path);
+            convergence_file.open(convergence_file_path, std::ios_base::app);
+            if (convergence_file.is_open() && !file_exists)
+            {
+                convergence_file << "h,N_el_x,N_el_y,r,theta,dt,T,rel_L2_error_avg,rel_H1_error_avg" << std::endl;
+            }
+        }
+    }
+}
+
+void WaveTheta::compute_and_log_energy()
+{
+    // Compute energy: E = 0.5 * (M*v·v + c^2*A*u·u)
+    TrilinosWrappers::MPI::Vector tmp_u(solution_u);
+    TrilinosWrappers::MPI::Vector tmp_v(solution_v);
+    stiffness_matrix.vmult(tmp_u, solution_u);
+    mass_matrix.vmult(tmp_v, solution_v);
+    current_energy = 0.5 * (tmp_v * solution_v + tmp_u * solution_u);
+
+    // Log to file (only rank 0)
+    if (mpi_rank == 0 && energy_log_file.is_open())
+    {
+        energy_log_file << timestep_number << "," << time << "," << current_energy << std::endl;
+    }
+}
+
+void WaveTheta::compute_and_log_error()
+{
+    if (exact_solution == nullptr)
+        return;
+
+    exact_solution->set_time(time);
+
+    const double error_L2 = compute_error(VectorTools::L2_norm, *exact_solution);
+    const double error_H1 = compute_error(VectorTools::H1_norm, *exact_solution);
+
+    const double rel_error_L2 = compute_relative_error(VectorTools::L2_norm, *exact_solution);
+    const double rel_error_H1 = compute_relative_error(VectorTools::H1_norm, *exact_solution);
+
+    // Log to file (only rank 0)
+    if (mpi_rank == 0 && error_log_file.is_open())
+    {
+        error_log_file << timestep_number << "," << time << ","
+                       << std::scientific << std::setprecision(6)
+                       << error_L2 << "," << error_H1 << ","
+                       << rel_error_L2 << "," << rel_error_H1 << std::endl;
+    }
+
+    // Accumulate for averaging (using relative errors)
+    accumulated_L2_error += rel_error_L2;
+    accumulated_H1_error += rel_error_H1;
+    error_sample_count++;
+}
+
+void WaveTheta::compute_final_errors()
+{
+    if (exact_solution == nullptr || error_sample_count == 0)
+        return;
+
+    const double avg_L2_error = accumulated_L2_error / error_sample_count;
+    const double avg_H1_error = accumulated_H1_error / error_sample_count;
+
+    // Write to convergence file (only rank 0)
+    if (mpi_rank == 0 && convergence_file.is_open())
+    {
+        const double h = 1.0 / std::sqrt(N_el.first * N_el.second);
+        convergence_file << h << "," << N_el.first << "," << N_el.second << "," << r << ","
+                         << theta << "," << delta_t << "," << T << ","
+                         << std::scientific << std::setprecision(6)
+                         << avg_L2_error << "," << avg_H1_error << std::endl;
+
+        pcout << "Average errors over time:" << std::endl;
+        pcout << "  Average L2 error  = " << avg_L2_error << std::endl;
+        pcout << "  Average H1 error  = " << avg_H1_error << std::endl;
     }
 }
 
@@ -405,6 +502,17 @@ void WaveTheta::output() const
                                         /* time = */ static_cast<long int>(time));
 }
 
+void WaveTheta::print_step_info()
+{
+    std::ostringstream oss;
+    oss << "Step " << std::setw(6) << timestep_number
+        << ",  t=" << std::scientific << std::setprecision(3) << std::setw(9) << time
+        << ",  ||u||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_u.l2_norm()
+        << ",  ||v||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_v.l2_norm()
+        << ",  E=" << std::scientific << std::setprecision(3) << std::setw(9) << current_energy;
+    pcout << oss.str() << std::endl;
+}
+
 void WaveTheta::run()
 {
     setup();
@@ -427,8 +535,6 @@ void WaveTheta::run()
     timestep_number = 0;
     time = 0.0;
 
-    const unsigned int log_every = 10;
-
     while (time < T)
     {
         time += delta_t;
@@ -447,13 +553,13 @@ void WaveTheta::run()
 
         if (timestep_number % log_every == 0)
         {
-            // concise aligned log (scientific)
-            std::ostringstream oss;
-            oss << "Step " << std::setw(6) << timestep_number
-                << ",  t=" << std::scientific << std::setprecision(3) << std::setw(9) << time
-                << ",  ||u||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_u.l2_norm()
-                << ",  ||v||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_v.l2_norm();
-            pcout << oss.str() << std::endl;
+            compute_and_log_energy();
+            compute_and_log_error();
+        }
+
+        if (timestep_number % print_every == 0)
+        {
+            print_step_info();
         }
 
         output();
@@ -461,6 +567,26 @@ void WaveTheta::run()
 
     pcout << "\nSimulation completed: " << timestep_number
           << " steps, final time t = " << time << std::endl;
+
+    // Compute and log final averaged errors
+    compute_final_errors();
+
+    // Close log files (only rank 0)
+    if (mpi_rank == 0)
+    {
+        if (energy_log_file.is_open())
+        {
+            energy_log_file.close();
+        }
+        if (error_log_file.is_open())
+        {
+            error_log_file.close();
+        }
+        if (convergence_file.is_open())
+        {
+            convergence_file.close();
+        }
+    }
 }
 
 double
@@ -487,6 +613,41 @@ WaveTheta::compute_error(const VectorTools::NormType& norm_type,
     return error;
 }
 
+double
+WaveTheta::compute_relative_error(const VectorTools::NormType& norm_type,
+                                  const Function<dim>& exact_solution) const
+{
+    const double error = compute_error(norm_type, exact_solution);
+
+    // Compute norm of exact solution
+    const QGaussSimplex<dim> quadrature_error(r + 2);
+    FE_SimplexP<dim> fe_linear(1);
+    MappingFE mapping(fe_linear);
+
+    // Create a zero vector with the correct size
+    TrilinosWrappers::MPI::Vector zero_vector(dof_handler.locally_owned_dofs(), MPI_COMM_WORLD);
+    zero_vector = 0.0;
+
+    Vector<double> exact_per_cell(mesh.n_active_cells());
+
+    VectorTools::integrate_difference(mapping,
+                                      dof_handler,
+                                      zero_vector,
+                                      exact_solution,
+                                      exact_per_cell,
+                                      quadrature_error,
+                                      norm_type);
+
+    const double exact_norm =
+        VectorTools::compute_global_error(mesh, exact_per_cell, norm_type);
+
+    // Avoid division by zero
+    if (exact_norm < 1e-14)
+        return error;
+
+    return error / exact_norm;
+}
+
 // Helper function to create clean filenames from double values
 
 std::string clean_double(double x, int precision)
@@ -502,5 +663,5 @@ std::string clean_double(double x, int precision)
     while (!s.empty() && (s.back() == '0' || s.back() == '_'))
         s.pop_back();
 
-    return s;
+    return s.empty() ? "0" : s;
 }

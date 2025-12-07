@@ -49,6 +49,14 @@ void ParameterReader::declare_scalar_parameters()
                       "0.01",
                       Patterns::Double(0.0),
                       "Length of the time step");
+    prm.declare_entry("Log Every",
+                      "10",
+                      Patterns::Integer(1),
+                      "Log energy every n timesteps");
+    prm.declare_entry("Print Every",
+                      "10",
+                      Patterns::Integer(1),
+                      "Print step info every n timesteps");
 }
 
 void ParameterReader::declare_function_subsections(const std::vector<std::string>& names)
@@ -61,7 +69,7 @@ void ParameterReader::declare_function_subsections(const std::vector<std::string
                           Patterns::Anything(),
                           "List of function constants");
         prm.declare_entry("Function expression",
-                          "0.0",
+                          "",
                           Patterns::Anything(),
                           "Function expression");
         prm.declare_entry("Variable names",
@@ -94,11 +102,27 @@ void ParameterReader::load_functions(const std::vector<std::string>& names,
     for (unsigned int i = 0; i < names.size(); ++i)
     {
         prm.enter_subsection(names[i]);
+        const std::string expr = prm.get("Function expression");
+        const std::string var_names = prm.get("Variable names");
+
+        // Special handling for "Solution": skip if not defined
+        if (names[i] == "Solution" && expr.empty())
+        {
+            prm.leave_subsection();
+            continue;
+        }
+
+        // For other functions, require explicit definition
+        if (expr.empty())
+        {
+            throw std::invalid_argument("Function expression for '" + names[i] + "' must be specified in the parameter file.");
+        }
+
         auto constants = parse_constants_with_pi_and_multiplication(prm.get("Function constants"));
         constants["pi"] = numbers::PI;
-        bool time_dependent = (prm.get("Variable names").find("t") != std::string::npos);
-        funcs[i]->initialize(prm.get("Variable names"),
-                             prm.get("Function expression"),
+        bool time_dependent = (var_names.find("t") != std::string::npos);
+        funcs[i]->initialize(var_names,
+                             expr,
                              constants,
                              time_dependent);
         prm.leave_subsection();
