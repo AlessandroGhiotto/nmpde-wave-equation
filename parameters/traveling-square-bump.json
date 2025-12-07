@@ -1,0 +1,40 @@
+{
+	"Geometry": "[0.0, 3.0] x [0.0, 3.0]",
+	"Nel": "180, 60",
+	"R": "1",
+	"T": "5.0",
+	"Theta": "0.5",
+	"Beta": "0.25",
+	"Gamma": "0.5",
+	"Dt": "0.015625",
+	"C": {
+		"Function constants": "",
+		"Function expression": "1.0",
+		"Variable names": "x, y, t"
+	},
+	"F": {
+		"Function constants": "",
+		"Function expression": "0.0",
+		"Variable names": "x, y, t"
+	},
+	"U0": {
+		"Function constants": "eps=0.0075, T=0.7, w=0.2, A=1.0",
+		"Function expression": "A*0.5*(tanh(x/eps) - tanh((x - w)/eps))",
+		"Variable names": "x, y"
+	},
+	"V0": {
+		"Function constants": "eps=0.0075, T=0.7, w=0.2, A=1.0, c=1.0",
+		"Function expression": "-c*A*0.5*(1/(cosh(x/eps)^2) - 1/(cosh((x - w)/eps)^2))",
+		"Variable names": "x, y"
+	},
+	"G": {
+		"Function constants": "",
+		"Function expression": "0.0",
+		"Variable names": "x, y, t"
+	},
+	"DGDT": {
+		"Function constants": "",
+		"Function expression": "0.0",
+		"Variable names": "x, y, t"
+	}
+}
