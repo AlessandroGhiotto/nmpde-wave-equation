@@ -63,7 +63,7 @@ void WaveEquationBase::prepare_output_filename(const std::string& method_params)
 {
     output_folder = "../results/" + problem_name + "/run-R" + std::to_string(r) +
                     "-N" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
-                    "-dt" + clean_double(delta_t) + method_params + "/";
+                    "-dt" + clean_double(delta_t) + "-T" + clean_double(T) + method_params + "/";
 
     if (mpi_rank == 0)
     {
@@ -202,12 +202,12 @@ double WaveEquationBase::compute_relative_error(const VectorTools::NormType& nor
     TrilinosWrappers::MPI::Vector zero_vector(dof_handler.locally_owned_dofs(), MPI_COMM_WORLD);
     zero_vector = 0.0;
 
-    Vector<double> exact_per_cell(mesh.n_active_cells());
+    Vector<double> norm_per_cell(mesh.n_active_cells());
     VectorTools::integrate_difference(mapping, dof_handler, zero_vector,
-                                      exact_solution, exact_per_cell,
+                                      exact_solution, norm_per_cell,
                                       quadrature_error, norm_type);
 
-    const double exact_norm = VectorTools::compute_global_error(mesh, exact_per_cell, norm_type);
+    const double exact_norm = VectorTools::compute_global_error(mesh, norm_per_cell, norm_type);
 
     if (exact_norm < 1e-14)
         return error;
