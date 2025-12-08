@@ -1,5 +1,6 @@
 #include "ParameterReader.hpp"
 #include "WaveNewmark.hpp"
+#include <cstdlib>
 
 int main(int argc, char* argv[])
 {
@@ -19,6 +20,9 @@ int main(int argc, char* argv[])
     else
         pcout << "Using parameter file from argument: " << parameters_file << std::endl;
     pcout << "===============================================" << std::endl;
+
+    // Make the parameter file path available to downstream code (e.g., for logging/copying).
+    ::setenv("NMPDE_PARAM_FILE", parameters_file.c_str(), 1);
 
     // ---------------------------------------
 
