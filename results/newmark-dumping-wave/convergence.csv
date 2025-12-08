@@ -1,0 +1,2 @@
+h,N_el_x,N_el_y,r,dt,T,method,rel_L2_error_avg,rel_H1_error_avg
+0.00625,160,160,1,0.0035,3,newmark-dumping-wave,9.021455e-01,9.038083e-01

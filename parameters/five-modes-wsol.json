@@ -1,0 +1,45 @@
+{
+  "Geometry": "[0.0, 1.0] x [0.0, 1.0]",
+  "Nel": "160",
+  "R": "1",
+  "T": "12.0",
+  "Theta": "0.5",
+  "Beta": "0.25",
+  "Gamma": "0.5",
+  "Dt": "0.00250",
+  "C": {
+    "Function constants": "",
+    "Function expression": "1.0",
+    "Variable names": "x, y, t"
+  },
+  "F": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y, t"
+  },
+  "U0": {
+    "Function constants": "",
+    "Function expression": "0.2*sin(pi*x)*sin(pi*y) + 0.15*sin(2*pi*x)*sin(pi*y) + 0.1*sin(pi*x)*sin(2*pi*y) + 0.08*sin(2*pi*x)*sin(2*pi*y) + 0.05*sin(3*pi*x)*sin(pi*y)",
+    "Variable names": "x, y"
+  },
+  "V0": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y"
+  },
+  "G": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y, t"
+  },
+  "DGDT": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y, t"
+  },
+  "Solution": {
+    "Function constants": "",
+    "Function expression":"0.2*cos(sqrt(2)*pi*t)*sin(pi*x)*sin(pi*y) + 0.15*cos(sqrt(5)*pi*t)*sin(2*pi*x)*sin(pi*y) + 0.1*cos(sqrt(5)*pi*t)*sin(pi*x)*sin(2*pi*y) + 0.08*cos(2*sqrt(2)*pi*t)*sin(2*pi*x)*sin(2*pi*y) + 0.05*cos(sqrt(10)*pi*t)*sin(3*pi*x)*sin(pi*y)",
+    "Variable names": "x, y, t" 
+  }
+}

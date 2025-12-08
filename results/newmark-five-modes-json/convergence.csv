@@ -1,0 +1,3 @@
+h,N_el_x,N_el_y,r,dt,T,method,rel_L2_error_avg,rel_H1_error_avg
+0.00625,160,160,1,0.0025,2,newmark-five-modes-json,1.244688e-02,4.824124e-02
+0.00625,160,160,1,0.0025,12,newmark-five-modes-json,8.807263e-02,1.127579e-01
