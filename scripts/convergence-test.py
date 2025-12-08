@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Manual configuration for convergence sweep
 BASE_PARAM = Path("../parameters/standing-mode-wsol.json")
-BINARY = Path("../build/main-newmark")
+BINARY = Path("../build/main-theta")
 MPI_PROCS = 4
 NEL_VALUES = ["20", "40", "80", "160", "320"]
 R_VALUES = ["1", "2"]
