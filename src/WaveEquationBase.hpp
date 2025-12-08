@@ -18,6 +18,7 @@
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/vector_tools.h>
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>

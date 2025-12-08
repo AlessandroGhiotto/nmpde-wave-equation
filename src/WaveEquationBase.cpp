@@ -70,6 +70,30 @@ void WaveEquationBase::prepare_output_filename(const std::string& method_params)
         if (!std::filesystem::exists(output_folder))
             std::filesystem::create_directories(output_folder);
 
+        // Copy the parameter file for reproducibility, if provided.
+        if (const char* param_env = std::getenv("NMPDE_PARAM_FILE"))
+        {
+            try
+            {
+                const std::filesystem::path src(param_env);
+                const std::filesystem::path dst = std::filesystem::path(output_folder) / "parameters.json";
+                if (std::filesystem::exists(src))
+                {
+                    std::filesystem::copy_file(src, dst,
+                                               std::filesystem::copy_options::overwrite_existing);
+                    pcout << "  Parameters copied to " << dst << std::endl;
+                }
+                else
+                {
+                    pcout << "  Parameter file not found: " << src << std::endl;
+                }
+            }
+            catch (const std::exception& e)
+            {
+                pcout << "  Warning: could not copy parameter file (" << e.what() << ")" << std::endl;
+            }
+        }
+
         energy_log_file.open(output_folder + "energy.csv");
         if (energy_log_file.is_open())
             energy_log_file << "timestep,time,energy" << std::endl;
