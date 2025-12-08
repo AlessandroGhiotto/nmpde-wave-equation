@@ -10,6 +10,9 @@
 # BUILD FOLDER
 **/build/*
 
+# RESULTS FOLDER
+**/results/*
+
 # ------------------------------
 
 

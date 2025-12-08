@@ -11,6 +11,8 @@ Mesh files should not be uploaded to the repository. If applicable, upload `gmsh
 To build the executable, make sure you have loaded the needed modules with
 
 ```bash
+$ apptainer shell /path/to/amsc_mk_2025.sif
+$ source /u/sw/etc/bash.bashrc
 $ module load gcc-glibc dealii
 ```
 

@@ -1,2 +1,0 @@
-h,N_el_x,N_el_y,r,dt,T,method,rel_L2_error_avg,rel_H1_error_avg
-0.00625,160,160,2,0.0035,2,theta-standing-mode-wsol,6.372531e-02,1.066723e+01
