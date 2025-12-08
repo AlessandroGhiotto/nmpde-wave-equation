@@ -1,0 +1,4 @@
+h,N_el_x,N_el_y,r,dt,T,method,rel_L2_error_avg,rel_H1_error_avg
+0.01,100,100,1,0.0035,2,newmark-two-modes-wsol,8.350308e-02,1.693097e-01
+0.02,50,50,1,0.0035,2,newmark-two-modes-wsol,3.141712e-01,4.558241e-01
+0.04,25,25,1,0.0035,2,newmark-two-modes-wsol,7.653516e-01,9.438647e-01

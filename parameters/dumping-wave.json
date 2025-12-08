@@ -1,0 +1,45 @@
+{
+  "Geometry": "[0.0, 1.0] x [0.0, 1.0]",
+  "Nel": "160",
+  "R": "1",
+  "T": "3.0",
+  "Theta": "0.5",
+  "Beta": "0.25",
+  "Gamma": "0.5",
+  "Dt": "0.00350",
+  "C": {
+    "Function constants": "",
+    "Function expression": "1.0",
+    "Variable names": "x, y, t"
+  },
+  "F": {
+    "Function constants": "",
+    "Function expression": "exp(-0.1*t)*sin(pi*x)*sin(pi*y)*(0.01*cos(sqrt(2)*pi*t) + 0.8886*sin(sqrt(2)*pi*t))",
+    "Variable names": "x, y, t"
+  },
+  "U0": {
+    "Function constants": "",
+    "Function expression": "0.2*sin(pi*x)*sin(pi*y)",
+    "Variable names": "x, y"
+  },
+  "V0": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y"
+  },
+  "G": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y, t"
+  },
+  "DGDT": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y, t"
+  },
+  "Solution": {
+    "Function constants": "",
+    "Function expression": "0.2*exp(-0.1*t)*cos(sqrt(2)*pi*t)*sin(pi*x)*sin(pi*y)",
+    "Variable names": "x, y, t"
+  }
+}
