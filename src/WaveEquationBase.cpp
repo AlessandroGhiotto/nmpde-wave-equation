@@ -134,8 +134,8 @@ void WaveEquationBase::compute_and_log_error()
 
     const double error_L2 = compute_error(VectorTools::L2_norm, *exact_solution);
     const double error_H1 = compute_error(VectorTools::H1_norm, *exact_solution);
-    const double rel_error_L2 = compute_relative_error(VectorTools::L2_norm, *exact_solution);
-    const double rel_error_H1 = compute_relative_error(VectorTools::H1_norm, *exact_solution);
+    const double rel_error_L2 = compute_relative_error(error_L2, VectorTools::L2_norm, *exact_solution);
+    const double rel_error_H1 = compute_relative_error(error_H1, VectorTools::H1_norm, *exact_solution);
 
     if (mpi_rank == 0 && error_log_file.is_open())
     {
@@ -189,6 +189,23 @@ void WaveEquationBase::output() const
     data_out.add_data_vector(dof_handler, solution_u, "u");
     data_out.add_data_vector(dof_handler, solution_v, "v");
 
+    if (exact_solution != nullptr)
+    {
+        exact_solution->set_time(time);
+
+        IndexSet locally_owned = dof_handler.locally_owned_dofs();
+        IndexSet locally_relevant = DoFTools::extract_locally_relevant_dofs(dof_handler);
+
+        TrilinosWrappers::MPI::Vector exact_solution_vector;
+        exact_solution_vector.reinit(locally_owned, locally_relevant, MPI_COMM_WORLD);
+
+        VectorTools::interpolate(dof_handler, *exact_solution, exact_solution_vector);
+        exact_solution_vector.compress(VectorOperation::insert);
+
+        // use the same overload that you used for u/v
+        data_out.add_data_vector(dof_handler, exact_solution_vector, "u_exact");
+    }
+
     std::vector<unsigned int> partition_int(mesh.n_active_cells());
     GridTools::get_subdomain_association(mesh, partition_int);
     const Vector<double> partitioning(partition_int.begin(), partition_int.end());
@@ -199,26 +216,58 @@ void WaveEquationBase::output() const
                                         MPI_COMM_WORLD, 4, static_cast<long int>(time));
 }
 
-double WaveEquationBase::compute_error(const VectorTools::NormType& norm_type,
+double WaveEquationBase::compute_error(const VectorTools::NormType& cell_norm,
                                        const Function<dim>& exact_solution) const
 {
+    // Quadrature for the error integration
     const QGaussSimplex<dim> quadrature_error(r + 2);
+
+    // Use whatever mapping you use in your main assembly/output (this is just your code):
     FE_SimplexP<dim> fe_linear(1);
     MappingFE mapping(fe_linear);
 
-    Vector<double> error_per_cell(mesh.n_active_cells());
-    VectorTools::integrate_difference(mapping, dof_handler, solution_u,
-                                      exact_solution, error_per_cell,
-                                      quadrature_error, norm_type);
+    // --- 1. Make sure we have a GHOSTED solution vector -------------------------
+    // Assume:
+    //   - dof_handler is based on a parallel::distributed::Triangulation<dim>
+    //   - solution_u is a "locally owned" vector (no ghosts)
+    //   - locally_relevant_dofs is the index set of locally relevant DoFs
+    //
+    // If you already have a ghosted vector (e.g. solution_u_ghosted), just use that
+    // directly and skip this block.
 
-    return VectorTools::compute_global_error(mesh, error_per_cell, norm_type);
+    TrilinosWrappers::MPI::Vector solution_ghosted; // or TrilinosWrappers::MPI::Vector, etc.
+    IndexSet locally_relevant_dofs = DoFTools::extract_locally_relevant_dofs(dof_handler);
+    solution_ghosted.reinit(locally_relevant_dofs,
+                            mesh.get_communicator()); // 'mesh' is your triangulation
+    solution_ghosted = solution_u;                    // imports ghost values via MPI
+
+    // --- 2. Cellwise error vector (float is the usual type used in dealii) ------
+    Vector<float> error_per_cell(mesh.n_active_cells());
+
+    VectorTools::integrate_difference(mapping,
+                                      dof_handler,
+                                      solution_ghosted,
+                                      exact_solution,
+                                      error_per_cell,
+                                      quadrature_error,
+                                      cell_norm);
+
+    // --- 3. Global reduction (MPI-aware) ---------------------------------------
+    // This overload of compute_global_error already does the MPI communication
+    // for parallel::distributed::Triangulation. Don't wrap this in your own
+    // MPI_Allreduce / Utilities::MPI::sum.
+    const double global_error =
+        VectorTools::compute_global_error(mesh,
+                                          error_per_cell,
+                                          cell_norm);
+
+    return global_error;
 }
 
-double WaveEquationBase::compute_relative_error(const VectorTools::NormType& norm_type,
+double WaveEquationBase::compute_relative_error(const double error, // we give it as input, so we don't compute it twice
+                                                const VectorTools::NormType& norm_type,
                                                 const Function<dim>& exact_solution) const
 {
-    const double error = compute_error(norm_type, exact_solution);
-
     const QGaussSimplex<dim> quadrature_error(r + 2);
     FE_SimplexP<dim> fe_linear(1);
     MappingFE mapping(fe_linear);

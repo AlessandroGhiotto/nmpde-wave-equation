@@ -13,6 +13,9 @@
 # RESULTS FOLDER
 **/results/*
 
+# PARAVIEWS STATES AND OUTPUTS
+**/paraview/*
+
 # ------------------------------
 
 

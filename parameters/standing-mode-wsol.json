@@ -1,12 +1,12 @@
 {
 	"Geometry": "[0.0, 1.0] x [0.0, 1.0]",
-	"Nel": "320",
+	"Nel": "80",
 	"R": "1",
 	"T": "1.0",
 	"Theta": "0.5",
 	"Beta": "0.25",
 	"Gamma": "0.5",
-	"Dt": "0.0010",
+	"Dt": "0.0015",
 	"C": {
 		"Function constants": "",
 		"Function expression": "1.0",

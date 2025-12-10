@@ -78,7 +78,9 @@ class WaveEquationBase
     void output() const;
 
     double compute_error(const VectorTools::NormType&, const Function<dim>&) const;
-    double compute_relative_error(const VectorTools::NormType&, const Function<dim>&) const;
+    double compute_relative_error(const double error,
+                                  const VectorTools::NormType& norm_type,
+                                  const Function<dim>& exact_solution) const;
 
     // Problem description
     const std::string problem_name;
