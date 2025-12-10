@@ -241,6 +241,9 @@ void WaveNewmark::run()
     timestep_number = 0;
     time = 0.0;
 
+    // Start timer
+    auto start_time = std::chrono::high_resolution_clock::now();
+
     while (time < T)
     {
         time += delta_t;
@@ -269,8 +272,14 @@ void WaveNewmark::run()
         output();
     }
 
+    // Stop timer and compute elapsed time
+    auto end_time = std::chrono::high_resolution_clock::now();
+    simulation_time = std::chrono::duration<double>(end_time - start_time).count();
+
     pcout << "\nSimulation completed: " << timestep_number
           << " steps, final time t = " << time << std::endl;
+    pcout << "Elapsed time: " << std::fixed << std::setprecision(3)
+          << simulation_time << " seconds" << std::endl;
 
     compute_final_errors();
 

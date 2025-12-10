@@ -11,7 +11,7 @@ BINARY = Path("../build/main-theta")
 MPI_PROCS = 4
 NEL_VALUES = ["20", "40", "80", "160", "320"]
 R_VALUES = ["1", "2"]
-DT_VALUES = ["0.05", "0.01", "0.005"]
+DT_VALUES = ["0.1", "0.05", "0.01", "0.005", "0.001"]
 
 
 def load_base(path: Path) -> dict:
@@ -44,6 +44,7 @@ def main() -> None:
     try:
         for nel, r, dt in combos:
             param_file = write_temp_params(base, nel, r, dt)
+            print("=" * 40)
             print(f"  Nel={nel}, R={r}, Dt={dt} -> {param_file}")
             try:
                 code = run_case(BINARY, param_file)

@@ -18,6 +18,7 @@
 #include <deal.II/numerics/matrix_tools.h>
 #include <deal.II/numerics/vector_tools.h>
 
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -105,6 +106,7 @@ class WaveEquationBase
     double accumulated_L2_error = 0.0;
     double accumulated_H1_error = 0.0;
     unsigned int error_sample_count = 0;
+    double simulation_time = 0.0;
 
     // Problem data
     const Function<dim>& c;

@@ -108,7 +108,7 @@ void WaveEquationBase::prepare_output_filename(const std::string& method_params)
             bool file_exists = std::filesystem::exists(convergence_file_path);
             convergence_file.open(convergence_file_path, std::ios_base::app);
             if (convergence_file.is_open() && !file_exists)
-                convergence_file << "h,N_el_x,N_el_y,r,dt,T,method,rel_L2_error_avg,rel_H1_error_avg" << std::endl;
+                convergence_file << "h,N_el_x,N_el_y,r,dt,T,method,rel_L2_error_avg,rel_H1_error_avg,elapsed_time_s" << std::endl;
         }
     }
 }
@@ -164,7 +164,8 @@ void WaveEquationBase::compute_final_errors()
         convergence_file << h << "," << N_el.first << "," << N_el.second << "," << r << ","
                          << delta_t << "," << T << "," << problem_name << ","
                          << std::scientific << std::setprecision(6)
-                         << avg_L2_error << "," << avg_H1_error << std::endl;
+                         << avg_L2_error << "," << avg_H1_error << ","
+                         << std::fixed << std::setprecision(3) << simulation_time << std::endl;
 
         pcout << "Average errors over time:" << std::endl;
         pcout << "  Average Relative L2 error  = " << avg_L2_error << std::endl;
@@ -222,28 +223,18 @@ double WaveEquationBase::compute_error(const VectorTools::NormType& cell_norm,
     // Quadrature for the error integration
     const QGaussSimplex<dim> quadrature_error(r + 2);
 
-    // Use whatever mapping you use in your main assembly/output (this is just your code):
     FE_SimplexP<dim> fe_linear(1);
     MappingFE mapping(fe_linear);
 
-    // --- 1. Make sure we have a GHOSTED solution vector -------------------------
-    // Assume:
-    //   - dof_handler is based on a parallel::distributed::Triangulation<dim>
-    //   - solution_u is a "locally owned" vector (no ghosts)
-    //   - locally_relevant_dofs is the index set of locally relevant DoFs
-    //
-    // If you already have a ghosted vector (e.g. solution_u_ghosted), just use that
-    // directly and skip this block.
-
-    TrilinosWrappers::MPI::Vector solution_ghosted; // or TrilinosWrappers::MPI::Vector, etc.
+    // ghost vector to hold solution including ghost values
+    TrilinosWrappers::MPI::Vector solution_ghosted;
     IndexSet locally_relevant_dofs = DoFTools::extract_locally_relevant_dofs(dof_handler);
     solution_ghosted.reinit(locally_relevant_dofs,
-                            mesh.get_communicator()); // 'mesh' is your triangulation
-    solution_ghosted = solution_u;                    // imports ghost values via MPI
+                            mesh.get_communicator());
+    solution_ghosted = solution_u; // imports ghost values
 
-    // --- 2. Cellwise error vector (float is the usual type used in dealii) ------
+    // Cellwise error vector
     Vector<float> error_per_cell(mesh.n_active_cells());
-
     VectorTools::integrate_difference(mapping,
                                       dof_handler,
                                       solution_ghosted,
@@ -252,14 +243,10 @@ double WaveEquationBase::compute_error(const VectorTools::NormType& cell_norm,
                                       quadrature_error,
                                       cell_norm);
 
-    // --- 3. Global reduction (MPI-aware) ---------------------------------------
-    // This overload of compute_global_error already does the MPI communication
-    // for parallel::distributed::Triangulation. Don't wrap this in your own
-    // MPI_Allreduce / Utilities::MPI::sum.
-    const double global_error =
-        VectorTools::compute_global_error(mesh,
-                                          error_per_cell,
-                                          cell_norm);
+    // reduction
+    const double global_error = VectorTools::compute_global_error(mesh,
+                                                                  error_per_cell,
+                                                                  cell_norm);
 
     return global_error;
 }
