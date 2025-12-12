@@ -352,7 +352,8 @@ void WaveTheta::run()
     pcout << "Elapsed time: " << std::fixed << std::setprecision(3)
           << simulation_time << " seconds" << std::endl;
 
-    compute_final_errors();
+    // Compute final errors with logging of theta
+    compute_final_errors(std::to_string(theta), "", "");
 
     // Close log files
     if (mpi_rank == 0)

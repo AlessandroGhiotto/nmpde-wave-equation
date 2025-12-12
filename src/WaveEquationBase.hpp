@@ -75,6 +75,9 @@ class WaveEquationBase
     void compute_and_log_energy();
     void compute_and_log_error();
     void compute_final_errors();
+    void compute_final_errors(const std::string&,
+                              const std::string&,
+                              const std::string&);
     void print_step_info();
     void output() const;
 

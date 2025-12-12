@@ -108,7 +108,7 @@ void WaveEquationBase::prepare_output_filename(const std::string& method_params)
             bool file_exists = std::filesystem::exists(convergence_file_path);
             convergence_file.open(convergence_file_path, std::ios_base::app);
             if (convergence_file.is_open() && !file_exists)
-                convergence_file << "h,N_el_x,N_el_y,r,dt,T,method,rel_L2_error_avg,rel_H1_error_avg,elapsed_time_s" << std::endl;
+                convergence_file << "h,N_el_x,N_el_y,r,dt,T,method,theta,beta,gamma,rel_L2_error_avg,rel_H1_error_avg,elapsed_time_s" << std::endl;
         }
     }
 }
@@ -152,6 +152,13 @@ void WaveEquationBase::compute_and_log_error()
 
 void WaveEquationBase::compute_final_errors()
 {
+    compute_final_errors("", "", "");
+}
+
+void WaveEquationBase::compute_final_errors(const std::string& theta_str,
+                                            const std::string& beta_str,
+                                            const std::string& gamma_str)
+{
     if (exact_solution == nullptr || error_sample_count == 0)
         return;
 
@@ -162,14 +169,20 @@ void WaveEquationBase::compute_final_errors()
     {
         const double h = 1.0 / std::sqrt(N_el.first * N_el.second);
         convergence_file << h << "," << N_el.first << "," << N_el.second << "," << r << ","
-                         << delta_t << "," << T << "," << problem_name << ","
-                         << std::scientific << std::setprecision(6)
-                         << avg_L2_error << "," << avg_H1_error << ","
-                         << std::fixed << std::setprecision(3) << simulation_time << std::endl;
+                         << delta_t << "," << T << "," << problem_name << ",";
+        convergence_file << (theta_str.empty() ? "N/A" : theta_str) << ","
+                         << (beta_str.empty() ? "N/A" : beta_str) << ","
+                         << (gamma_str.empty() ? "N/A" : gamma_str) << ",";
+        convergence_file << std::scientific << std::setprecision(6)
+                         << avg_L2_error << "," << avg_H1_error << ",";
+        convergence_file << std::fixed << std::setprecision(3)
+                         << simulation_time << std::endl;
 
         pcout << "Average errors over time:" << std::endl;
-        pcout << "  Average Relative L2 error  = " << avg_L2_error << std::endl;
-        pcout << "  Average Relative H1 error  = " << avg_H1_error << std::endl;
+        pcout << "  Average Relative L2 error  = "
+              << std::scientific << std::setprecision(6) << avg_L2_error << std::endl;
+        pcout << "  Average Relative H1 error  = "
+              << std::scientific << std::setprecision(6) << avg_H1_error << std::endl;
     }
 }
 

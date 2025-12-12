@@ -7,11 +7,20 @@ from pathlib import Path
 
 # Manual configuration for convergence sweep
 BASE_PARAM = Path("../parameters/standing-mode-wsol.json")
-BINARY = Path("../build/main-theta")
 MPI_PROCS = 4
 NEL_VALUES = ["20", "40", "80", "160", "320"]
 R_VALUES = ["1", "2"]
 DT_VALUES = ["0.1", "0.05", "0.01", "0.005", "0.001"]
+T_VALUE = "1.0"
+
+BINARY = Path("../build/main-theta")
+# THETA_VALUE = "0.5" # CN
+THETA_VALUE = "1.0"  # BE
+# THETA_VALUE = "0.0" # FE
+
+# BINARY = Path("../build/main-newmark")
+BETA_VALUE = "0.25"
+GAMMA_VALUE = "0.5"
 
 
 def load_base(path: Path) -> dict:
@@ -24,6 +33,10 @@ def write_temp_params(base: dict, nel: str, r: str, dt: str) -> Path:
     params["Nel"] = nel.replace(" ", "")
     params["R"] = r
     params["Dt"] = dt
+    params["T"] = T_VALUE
+    params["Theta"] = THETA_VALUE
+    params["Beta"] = BETA_VALUE
+    params["Gamma"] = GAMMA_VALUE
     with BASE_PARAM.open("w", encoding="utf-8") as f:
         json.dump(params, f, indent=2)
     return BASE_PARAM

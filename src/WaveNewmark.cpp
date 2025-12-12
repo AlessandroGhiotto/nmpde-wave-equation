@@ -281,7 +281,8 @@ void WaveNewmark::run()
     pcout << "Elapsed time: " << std::fixed << std::setprecision(3)
           << simulation_time << " seconds" << std::endl;
 
-    compute_final_errors();
+    // Compute final errors with Newmark parameters to be logged in csv
+    compute_final_errors("", std::to_string(beta), std::to_string(gamma));
 
     // Close log files
     if (mpi_rank == 0)
