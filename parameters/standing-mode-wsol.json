@@ -1,45 +1,45 @@
 {
-	"Geometry": "[0.0, 1.0] x [0.0, 1.0]",
-	"Nel": "80",
-	"R": "1",
-	"T": "1.0",
-	"Theta": "0.5",
-	"Beta": "0.25",
-	"Gamma": "0.5",
-	"Dt": "0.0015",
-	"C": {
-		"Function constants": "",
-		"Function expression": "1.0",
-		"Variable names": "x, y, t"
-	},
-	"F": {
-		"Function constants": "",
-		"Function expression": "0.0",
-		"Variable names": "x, y, t"
-	},
-	"U0": {
-		"Function constants": "",
-		"Function expression": "sin(pi*x)*sin(pi*y)",
-		"Variable names": "x, y"
-	},
-	"V0": {
-		"Function constants": "",
-		"Function expression": "0.0",
-		"Variable names": "x, y"
-	},
-	"G": {
-		"Function constants": "",
-		"Function expression": "0.0",
-		"Variable names": "x, y, t"
-	},
-	"DGDT": {
-		"Function constants": "",
-		"Function expression": "0.0",
-		"Variable names": "x, y, t"
-	},
-	"Solution": {
-		"Function constants": "",
-		"Function expression": "cos(sqrt(2)*pi*t)*sin(pi*x)*sin(pi*y)",
-		"Variable names": "x, y, t"
-	}
+  "Geometry": "[0.0, 1.0] x [0.0, 1.0]",
+  "Nel": "320",
+  "R": "1",
+  "T": "1.0",
+  "Theta": "0.0",
+  "Beta": "0.25",
+  "Gamma": "0.5",
+  "Dt": "0.01",
+  "C": {
+    "Function constants": "",
+    "Function expression": "1.0",
+    "Variable names": "x, y, t"
+  },
+  "F": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y, t"
+  },
+  "U0": {
+    "Function constants": "",
+    "Function expression": "sin(pi*x)*sin(pi*y)",
+    "Variable names": "x, y"
+  },
+  "V0": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y"
+  },
+  "G": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y, t"
+  },
+  "DGDT": {
+    "Function constants": "",
+    "Function expression": "0.0",
+    "Variable names": "x, y, t"
+  },
+  "Solution": {
+    "Function constants": "",
+    "Function expression": "cos(sqrt(2)*pi*t)*sin(pi*x)*sin(pi*y)",
+    "Variable names": "x, y, t"
+  }
 }

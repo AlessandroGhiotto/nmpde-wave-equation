@@ -240,8 +240,7 @@ void WaveNewmark::run()
     output();
     timestep_number = 0;
     time = 0.0;
-    const double divergence_threshold = 1e150;
-    bool diverged = false;
+    const double divergence_threshold = 1e130;
 
     // Start timer
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -262,7 +261,6 @@ void WaveNewmark::run()
         {
             pcout << "Divergence detected at step " << timestep_number
                   << ", t = " << time << "; stopping simulation." << std::endl;
-            diverged = true;
             break;
         }
 
@@ -294,8 +292,7 @@ void WaveNewmark::run()
           << simulation_time << " seconds" << std::endl;
 
     // Compute final errors with Newmark parameters to be logged in csv
-    if (!diverged)
-        compute_final_errors("", std::to_string(beta), std::to_string(gamma));
+    compute_final_errors("", std::to_string(beta), std::to_string(gamma));
 
     // Close log files
     if (mpi_rank == 0)
