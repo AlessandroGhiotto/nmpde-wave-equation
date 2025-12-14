@@ -13,14 +13,15 @@ R_VALUES = ["1", "2"]
 DT_VALUES = ["0.1", "0.05", "0.01", "0.005", "0.001"]
 T_VALUE = "1.0"
 
-BINARY = Path("../build/main-theta")
+# BINARY = Path("../build/main-theta")
 # THETA_VALUE = "0.5" # CN
-THETA_VALUE = "1.0"  # BE
-# THETA_VALUE = "0.0" # FE
+# THETA_VALUE = "1.0"  # BE
+THETA_VALUE = "0.0"  # FE
 
-# BINARY = Path("../build/main-newmark")
-BETA_VALUE = "0.25"
+BINARY = Path("../build/main-newmark")
 GAMMA_VALUE = "0.5"
+BETA_VALUE = "0.25"  # Average constant acceleration
+# BETA_VALUE = "0.0"  # Explicit central difference scheme
 
 
 def load_base(path: Path) -> dict:

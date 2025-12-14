@@ -39,7 +39,7 @@ void WaveNewmark::setup()
         old_solution_a.reinit(locally_owned_dofs, MPI_COMM_WORLD);
         system_rhs.reinit(locally_owned_dofs, MPI_COMM_WORLD);
 
-        pcout << "Setup complete!" << std::endl;
+        pcout << "  Setup complete!" << std::endl;
     }
 }
 
@@ -240,6 +240,8 @@ void WaveNewmark::run()
     output();
     timestep_number = 0;
     time = 0.0;
+    const double divergence_threshold = 1e150;
+    bool diverged = false;
 
     // Start timer
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -253,6 +255,16 @@ void WaveNewmark::run()
         solve_a();
         update_u_v();
         apply_dirichlet_bc();
+
+        const double norm_u = solution_u.l2_norm();
+        const double norm_v = solution_v.l2_norm();
+        if (check_divergence(norm_u, norm_v, divergence_threshold))
+        {
+            pcout << "Divergence detected at step " << timestep_number
+                  << ", t = " << time << "; stopping simulation." << std::endl;
+            diverged = true;
+            break;
+        }
 
         old_solution_u = solution_u;
         old_solution_v = solution_v;
@@ -282,7 +294,8 @@ void WaveNewmark::run()
           << simulation_time << " seconds" << std::endl;
 
     // Compute final errors with Newmark parameters to be logged in csv
-    compute_final_errors("", std::to_string(beta), std::to_string(gamma));
+    if (!diverged)
+        compute_final_errors("", std::to_string(beta), std::to_string(gamma));
 
     // Close log files
     if (mpi_rank == 0)

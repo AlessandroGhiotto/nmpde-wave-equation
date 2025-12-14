@@ -86,6 +86,10 @@ class WaveEquationBase
                                   const VectorTools::NormType& norm_type,
                                   const Function<dim>& exact_solution) const;
 
+    bool check_divergence(const double norm_u,
+                          const double norm_v,
+                          const double threshold) const;
+
     // Problem description
     const std::string problem_name;
     std::string output_folder;

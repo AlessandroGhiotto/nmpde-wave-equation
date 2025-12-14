@@ -288,6 +288,14 @@ double WaveEquationBase::compute_relative_error(const double error, // we give i
     return error / exact_norm;
 }
 
+bool WaveEquationBase::check_divergence(const double norm_u,
+                                        const double norm_v,
+                                        const double threshold) const
+{
+    return (!std::isfinite(norm_u) || !std::isfinite(norm_v) ||
+            norm_u > threshold || norm_v > threshold);
+}
+
 std::string clean_double(double x, int precision)
 {
     std::ostringstream out;

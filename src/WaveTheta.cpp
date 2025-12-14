@@ -311,6 +311,8 @@ void WaveTheta::run()
     output();
     timestep_number = 0;
     time = 0.0;
+    const double divergence_threshold = 1e150;
+    bool diverged = false;
 
     // Start timer
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -325,6 +327,16 @@ void WaveTheta::run()
 
         assemble_rhs_v();
         solve_v();
+
+        const double norm_u = solution_u.l2_norm();
+        const double norm_v = solution_v.l2_norm();
+        if (check_divergence(norm_u, norm_v, divergence_threshold))
+        {
+            pcout << "Divergence detected at step " << timestep_number
+                  << ", t = " << time << "; stopping simulation." << std::endl;
+            diverged = true;
+            break;
+        }
 
         old_solution_u = solution_u;
         old_solution_v = solution_v;
@@ -353,7 +365,8 @@ void WaveTheta::run()
           << simulation_time << " seconds" << std::endl;
 
     // Compute final errors with logging of theta
-    compute_final_errors(std::to_string(theta), "", "");
+    if (!diverged)
+        compute_final_errors(std::to_string(theta), "", "");
 
     // Close log files
     if (mpi_rank == 0)
