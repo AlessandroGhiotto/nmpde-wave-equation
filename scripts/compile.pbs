@@ -3,22 +3,56 @@
 #PBS -q cpu
 #PBS -l select=1:ncpus=4
 #PBS -l walltime=00:20:00
-#PBS -o compile.out
-#PBS -e compile.err
+#PBS -o /dev/null
+#PBS -e /dev/null
 
-cd "$PBS_O_WORKDIR"
+set -Eeuo pipefail
+trap 'echo "FATAL: line $LINENO exit=$? (see compile.err if created)" >&2' ERR
+
+# Ensure we run (and write logs) in the directory where you did qsub
+cd "${PBS_O_WORKDIR:-$PWD}"
+
+# Force logs to appear here (PBS -o/-e with relative paths often end up in $HOME)
+: > compile.out
+: > compile.err
+exec >compile.out 2>compile.err
 
 echo "=== Compile job started on $(date) ==="
+echo "Workdir: $PWD"
+echo "Job ID: ${PBS_JOBID:-N/A}"
 echo "Node(s):"
-cat "$PBS_NODEFILE"
+if [[ -n "${PBS_NODEFILE:-}" && -f "$PBS_NODEFILE" ]]; then
+  cat "$PBS_NODEFILE"
+else
+  echo "(PBS_NODEFILE not set)"
+fi
 
-CONTAINER="../amsc_mk_2025.sif"
+# Resolve container path relative to the submission directory
+CONTAINER="$(readlink -f ../amsc_mk_2025.sif || true)"
+if [[ -z "${CONTAINER}" || ! -f "${CONTAINER}" ]]; then
+  echo "ERROR: container not found at ../amsc_mk_2025.sif (resolved: ${CONTAINER:-<empty>})" >&2
+  exit 2
+fi
 
-apptainer exec \
+# apptainer vs singularity (cluster-dependent)
+if command -v apptainer >/dev/null 2>&1; then
+  RUNTIME=apptainer
+elif command -v singularity >/dev/null 2>&1; then
+  RUNTIME=singularity
+else
+  echo "ERROR: neither apptainer nor singularity found in PATH" >&2
+  exit 127
+fi
+
+echo "Container: $CONTAINER"
+echo "Runtime: $RUNTIME"
+
+"$RUNTIME" exec \
   --bind "$PWD":"$PWD" \
   --bind /u/sw:/u/sw \
   "$CONTAINER" \
   /bin/bash -lc "
+    set -Eeuo pipefail
     source /u/sw/etc/bash.bashrc
     module load gcc-glibc dealii
 
