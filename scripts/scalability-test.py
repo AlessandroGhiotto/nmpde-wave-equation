@@ -11,7 +11,7 @@ from pathlib import Path
 BASE_PARAM = Path("../parameters/standing-mode-wsol.json")
 MPI_PROCS = [1, 2, 4]
 
-NEL_VALUES = ["10"]
+NEL_VALUES = ["320"]
 R_VALUES = ["1"]
 DT_VALUES = ["0.005"]
 T_VALUE = "5.0"
