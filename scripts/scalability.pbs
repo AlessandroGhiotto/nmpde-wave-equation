@@ -19,10 +19,6 @@ apptainer exec \
   /bin/bash -lc "
     source /u/sw/etc/bash.bashrc
     module load gcc-glibc dealii
-    mkdir build
-    cd build
-    cmake ..
-    make
     python3 ../scripts/scalability-test.py
   "
 

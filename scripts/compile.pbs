@@ -1,0 +1,34 @@
+#!/bin/bash
+#PBS -N compile_test
+#PBS -q cpu
+#PBS -l select=1:ncpus=4
+#PBS -l walltime=00:20:00
+#PBS -o compile.out
+#PBS -e compile.err
+
+cd "$PBS_O_WORKDIR"
+
+echo "=== Compile job started on $(date) ==="
+echo "Node(s):"
+cat "$PBS_NODEFILE"
+
+CONTAINER="../amsc_mk_2025.sif"
+
+apptainer exec \
+  --bind "$PWD":"$PWD" \
+  --bind /u/sw:/u/sw \
+  "$CONTAINER" \
+  /bin/bash -lc "
+    source /u/sw/etc/bash.bashrc
+    module load gcc-glibc dealii
+
+    echo \"Using compiler: \$(which gcc)\"
+    echo \"CMake version: \$(cmake --version | head -n1)\"
+
+    mkdir -p build
+    cd build
+    cmake ..
+    make -j4
+  "
+
+echo "=== Compile job finished on $(date) ==="
