@@ -301,8 +301,18 @@ std::string clean_double(double x, int precision)
     std::ostringstream out;
     out << std::fixed << std::setprecision(precision) << x;
     std::string s = out.str();
+
+    // Only trim trailing zeros if there is a decimal point (i.e., we're trimming fractional zeros),
+    // otherwise integers like "10" would incorrectly become "1".
+    const auto dot_pos = s.find('.');
+    if (dot_pos != std::string::npos)
+    {
+        while (!s.empty() && s.back() == '0')
+            s.pop_back();
+        if (!s.empty() && s.back() == '.')
+            s.pop_back();
+    }
+
     std::replace(s.begin(), s.end(), '.', '_');
-    while (!s.empty() && (s.back() == '0' || s.back() == '_'))
-        s.pop_back();
     return s.empty() ? "0" : s;
 }
