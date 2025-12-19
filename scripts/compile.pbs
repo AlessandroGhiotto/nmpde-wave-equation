@@ -6,6 +6,7 @@
 #PBS -o compile.out
 #PBS -e compile.err
 
+set -euo pipefail
 cd "$PBS_O_WORKDIR"
 
 echo "=== Compile job started on $(date) ==="
@@ -16,19 +17,28 @@ CONTAINER="../../amsc_mk_2025.sif"
 
 apptainer exec \
   --bind "$PWD":"$PWD" \
-  --bind /u/sw:/u/sw \
   "$CONTAINER" \
-  /bin/bash -lc "
-    source /u/sw/etc/bash.bashrc
-    module load gcc-glibc dealii
+  /bin/bash -lc '
+    set -euo pipefail
+    cd "'"$PBS_O_WORKDIR"'"
 
-    echo \"Using compiler: \$(which gcc)\"
-    echo \"CMake version: \$(cmake --version | head -n1)\"
+    # Init module system from inside the container
+    source /u/sw/etc/bash.bashrc
+
+    module purge || true
+    module load gcc-glibc dealii
+    module list
+
+    echo "Using compiler: $(which gcc)"
+    echo "gcc version:    $(gcc --version | head -n1)"
+    echo "CMake version:  $(cmake --version | head -n1)"
+    echo "DEAL_II_DIR:    ${DEAL_II_DIR:-<not set>}"
+    echo "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH:-<not set>}"
 
     mkdir -p build
     cd build
     cmake ..
     make -j4
-  "
+  '
 
 echo "=== Compile job finished on $(date) ==="
