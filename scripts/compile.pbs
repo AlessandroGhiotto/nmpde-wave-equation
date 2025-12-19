@@ -13,7 +13,7 @@ echo "=== Compile job started on $(date) ==="
 echo "Node(s):"
 cat "$PBS_NODEFILE"
 
-CONTAINER="../../amsc_mk_2025.sif"
+CONTAINER="../amsc_mk_2025.sif"
 
 apptainer exec \
   --bind "$PWD":"$PWD" \

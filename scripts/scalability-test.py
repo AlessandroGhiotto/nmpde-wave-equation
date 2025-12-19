@@ -9,9 +9,9 @@ from pathlib import Path
 
 # Manual configuration for convergence sweep
 BASE_PARAM = Path("../parameters/standing-mode-wsol.json")
-MPI_PROCS = [1, 2, 4]
+MPI_PROCS = [1, 2, 4, 8, 16]
 
-NEL_VALUES = ["320"]
+NEL_VALUES = ["10"]
 R_VALUES = ["1"]
 DT_VALUES = ["0.005"]
 T_VALUE = "5.0"
