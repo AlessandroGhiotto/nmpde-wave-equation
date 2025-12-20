@@ -10,9 +10,28 @@ import os
 
 # Manual configuration for convergence sweep
 BASE_PARAM = Path("../parameters/standing-mode-wsol.json")
-MPI_PROCS = [1, 2, 4, 8, 16]
 
-NEL_VALUES = ["10"]
+
+# Detect available CPUs from PBS or use fallback
+def get_available_cpus():
+    """Get number of CPUs from PBS_NODEFILE or ncpus environment variable."""
+    pbs_nodefile = os.environ.get("PBS_NODEFILE")
+    if pbs_nodefile and Path(pbs_nodefile).exists():
+        with open(pbs_nodefile) as f:
+            return len(f.readlines())
+
+    ncpus = os.environ.get("PBS_NCPUS") or os.environ.get("SLURM_CPUS_ON_NODE")
+    if ncpus:
+        return int(ncpus)
+
+    return 4  # fallback for local testing
+
+
+MAX_CPUS = get_available_cpus()
+# Only test up to available CPUs
+MPI_PROCS = [n for n in [1, 2, 4, 8, 16] if n <= MAX_CPUS]
+
+NEL_VALUES = ["120"]
 R_VALUES = ["1"]
 DT_VALUES = ["0.005"]
 T_VALUE = "5.0"
@@ -25,6 +44,9 @@ GAMMA_VALUE = "0.5"
 BETA_VALUE = "0.25"
 
 RESULTS_CSV = Path(__file__).with_name("scalability-results.csv")
+
+# Timeout in seconds (adjust based on expected runtime)
+TIMEOUT_SECONDS = 600  # 10 minutes per run
 
 
 def load_base(path: Path) -> dict:
@@ -64,18 +86,36 @@ def run_case(binary: Path, param_file: Path, nprocs: int) -> tuple[int, float]:
         "core",
         "--map-by",
         "core",
-        "--oversubscribe",  # safe for interactive sessions
+        # REMOVED --oversubscribe - causes hanging on clusters
         "-np",
         str(nprocs),
         str(binary),
         str(param_file),
     ]
 
+    # Add hostfile if available (PBS clusters)
+    pbs_nodefile = os.environ.get("PBS_NODEFILE")
+    if pbs_nodefile and Path(pbs_nodefile).exists():
+        cmd.insert(1, "--hostfile")
+        cmd.insert(2, pbs_nodefile)
+
     print(f"[RUN] {' '.join(cmd)}")
+    print(f"[INFO] Available CPUs: {MAX_CPUS}, Using: {nprocs}")
+
     t0 = time.perf_counter()
-    result = subprocess.run(cmd, env=env)
-    t1 = time.perf_counter()
-    return result.returncode, (t1 - t0)
+    try:
+        result = subprocess.run(
+            cmd,
+            env=env,
+            timeout=TIMEOUT_SECONDS,
+            capture_output=False,  # Let output go to stdout/stderr
+        )
+        t1 = time.perf_counter()
+        return result.returncode, (t1 - t0)
+    except subprocess.TimeoutExpired:
+        t1 = time.perf_counter()
+        print(f"[TIMEOUT] Run exceeded {TIMEOUT_SECONDS}s")
+        return -999, (t1 - t0)
 
 
 def main() -> None:

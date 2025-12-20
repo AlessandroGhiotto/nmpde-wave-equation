@@ -1,0 +1,16 @@
+#!/bin/bash
+#PBS -q cpu
+#PBS -l select=1:ncpus=16
+#PBS -l walltime=24:00:00
+#PBS -N wave_scalability
+#PBS -o scalability.out
+#PBS -e scalability.err
+
+cd $PBS_O_WORKDIR
+
+apptainer exec ../amsc_mk_2025.sif bash << 'EOF'
+source /u/sw/etc/bash.bashrc
+module load gcc-glibc dealii
+cd scripts/
+python scalability-test-cluster.py
+EOF
