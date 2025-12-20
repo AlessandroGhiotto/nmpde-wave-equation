@@ -1,12 +1,23 @@
 #include "ParameterReader.hpp"
 #include "WaveNewmark.hpp"
 #include <cstdlib>
+#include <mpi.h>
 
 int main(int argc, char* argv[])
 {
     Utilities::MPI::MPI_InitFinalize mpi_init(argc, argv);
     const unsigned int rank = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
     ConditionalOStream pcout(std::cout, rank == 0);
+
+    if (rank == 0)
+    {
+        int len = 0;
+        char version[MPI_MAX_LIBRARY_VERSION_STRING] = {};
+        if (MPI_Get_library_version(version, &len) == MPI_SUCCESS)
+            pcout << "MPI library: " << std::string(version, (len > 0 ? len : 0)) << std::endl;
+
+        pcout << "MPI world size: " << Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD) << std::endl;
+    }
 
     pcout << "===============================================" << std::endl;
     // get the file name from the argument

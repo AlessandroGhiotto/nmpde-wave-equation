@@ -6,47 +6,36 @@ import time
 import csv
 from pathlib import Path
 import os
+import shlex
 
+# Make all paths robust to current working directory
+PROJECT_DIR = Path(__file__).resolve().parents[1]  # .../wave-equation
 
 # Manual configuration for convergence sweep
-BASE_PARAM = Path("../parameters/standing-mode-wsol.json")
-
-
-# Detect available CPUs from PBS or use fallback
-def get_available_cpus():
-    """Get number of CPUs from PBS_NODEFILE or ncpus environment variable."""
-    pbs_nodefile = os.environ.get("PBS_NODEFILE")
-    if pbs_nodefile and Path(pbs_nodefile).exists():
-        with open(pbs_nodefile) as f:
-            return len(f.readlines())
-
-    ncpus = os.environ.get("PBS_NCPUS") or os.environ.get("SLURM_CPUS_ON_NODE")
-    if ncpus:
-        return int(ncpus)
-
-    return 4  # fallback for local testing
-
-
-MAX_CPUS = get_available_cpus()
-# Only test up to available CPUs
-MPI_PROCS = [n for n in [1, 2, 4, 8, 16] if n <= MAX_CPUS]
+BASE_PARAM = PROJECT_DIR / "parameters" / "standing-mode-wsol.json"
+MPI_PROCS = [1, 2, 4, 8, 16]
 
 NEL_VALUES = ["120"]
 R_VALUES = ["1"]
 DT_VALUES = ["0.005"]
 T_VALUE = "5.0"
 
-BINARY_THETA = Path("../build/main-theta")
+BINARY_THETA = PROJECT_DIR / "build" / "main-theta"
 THETA_VALUE = "0.5"  # CN
 
-BINARY_NEWMARK = Path("../build/main-newmark")
+BINARY_NEWMARK = PROJECT_DIR / "build" / "main-newmark"
 GAMMA_VALUE = "0.5"
 BETA_VALUE = "0.25"
 
 RESULTS_CSV = Path(__file__).with_name("scalability-results.csv")
+LOG_DIR = Path(__file__).with_name("scalability-logs")
 
-# Timeout in seconds (adjust based on expected runtime)
-TIMEOUT_SECONDS = 600  # 10 minutes per run
+# Environment-configurable launcher behavior (helps on clusters)
+MPI_LAUNCHER = os.environ.get("MPI_LAUNCHER", "mpirun")  # e.g. mpiexec, mpirun, srun
+MPI_EXTRA_ARGS = shlex.split(
+    os.environ.get("MPI_EXTRA_ARGS", "")
+)  # e.g. "--report-bindings"
+CASE_TIMEOUT_SECONDS = float(os.environ.get("CASE_TIMEOUT_SECONDS", "0"))  # 0 disables
 
 
 def load_base(path: Path) -> dict:
@@ -70,7 +59,26 @@ def write_temp_params(
     return out_path
 
 
-def run_case(binary: Path, param_file: Path, nprocs: int) -> tuple[int, float]:
+def _pbs_hostfile_args() -> list[str]:
+    pbs_nodefile = os.environ.get("PBS_NODEFILE", "")
+    if pbs_nodefile and Path(pbs_nodefile).is_file():
+        # OpenMPI/MPICH accept different flags; --hostfile is common for OpenMPI.
+        # If your site uses a different launcher, override via MPI_EXTRA_ARGS/MPI_LAUNCHER.
+        return ["--hostfile", pbs_nodefile]
+    return []
+
+
+def _mpi_cmd(nprocs: int, binary: Path, param_file: Path) -> list[str]:
+    # Avoid --oversubscribe by default on allocated nodes (can cause bad behavior on some MPIs).
+    base = [MPI_LAUNCHER, "-np", str(nprocs)]
+    base += _pbs_hostfile_args()
+    base += MPI_EXTRA_ARGS
+    return base + [str(binary), str(param_file)]
+
+
+def run_case(
+    binary: Path, param_file: Path, nprocs: int, log_path: Path
+) -> tuple[int, float]:
     env = dict(**os.environ)
 
     # 1. Force single-threaded libraries
@@ -79,43 +87,42 @@ def run_case(binary: Path, param_file: Path, nprocs: int) -> tuple[int, float]:
     env["OPENBLAS_NUM_THREADS"] = "1"
     env["NUMEXPR_NUM_THREADS"] = "1"
 
-    # 2. MPI binding and mapping (critical on clusters)
-    cmd = [
-        "mpirun",
-        "--bind-to",
-        "core",
-        "--map-by",
-        "core",
-        # REMOVED --oversubscribe - causes hanging on clusters
-        "-np",
-        str(nprocs),
-        str(binary),
-        str(param_file),
-    ]
+    cmd = _mpi_cmd(nprocs, binary, param_file)
 
-    # Add hostfile if available (PBS clusters)
-    pbs_nodefile = os.environ.get("PBS_NODEFILE")
-    if pbs_nodefile and Path(pbs_nodefile).exists():
-        cmd.insert(1, "--hostfile")
-        cmd.insert(2, pbs_nodefile)
-
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
     print(f"[RUN] {' '.join(cmd)}")
-    print(f"[INFO] Available CPUs: {MAX_CPUS}, Using: {nprocs}")
+    print(f"[LOG] {log_path}")
 
     t0 = time.perf_counter()
-    try:
-        result = subprocess.run(
+    with log_path.open("w", encoding="utf-8") as flog:
+        flog.write(f"CMD: {' '.join(cmd)}\n")
+        flog.write(f"CWD: {str(binary.parent)}\n")
+        flog.write(f"MPI_LAUNCHER: {MPI_LAUNCHER}\n")
+        flog.write(f"PBS_NODEFILE: {os.environ.get('PBS_NODEFILE','')}\n")
+        flog.flush()
+
+        # start_new_session=True lets us kill the whole mpirun process group on timeout/hang.
+        p = subprocess.Popen(
             cmd,
+            cwd=str(binary.parent),
             env=env,
-            timeout=TIMEOUT_SECONDS,
-            capture_output=False,  # Let output go to stdout/stderr
+            stdout=flog,
+            stderr=subprocess.STDOUT,
+            text=True,
+            start_new_session=True,
         )
-        t1 = time.perf_counter()
-        return result.returncode, (t1 - t0)
-    except subprocess.TimeoutExpired:
-        t1 = time.perf_counter()
-        print(f"[TIMEOUT] Run exceeded {TIMEOUT_SECONDS}s")
-        return -999, (t1 - t0)
+        try:
+            p.wait(timeout=None if CASE_TIMEOUT_SECONDS <= 0 else CASE_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            # Hard-kill the whole session (mpirun + ranks) to avoid orphaned MPI processes.
+            try:
+                os.killpg(p.pid, 9)
+            except Exception:
+                p.kill()
+            return -9, (time.perf_counter() - t0)
+
+    t1 = time.perf_counter()
+    return int(p.returncode or 0), (t1 - t0)
 
 
 def main() -> None:
@@ -125,8 +132,6 @@ def main() -> None:
         ("theta", BINARY_THETA, {"Theta": THETA_VALUE}),
         ("newmark", BINARY_NEWMARK, {"Beta": BETA_VALUE, "Gamma": GAMMA_VALUE}),
     ]
-
-    combos = itertools.product(NEL_VALUES, R_VALUES, DT_VALUES)
 
     header = [
         "scheme",
@@ -166,13 +171,18 @@ def main() -> None:
                         base, nel, r, dt, overrides, tmp_param
                     )
 
+                    log_path = (
+                        LOG_DIR
+                        / f"log_{scheme_name}_p{nprocs}_nel{nel}_r{r}_dt{dt}.txt"
+                    )
+
                     print("=" * 40)
                     print(
                         f"  scheme={scheme_name}, nprocs={nprocs}, Nel={nel}, R={r}, Dt={dt}"
                     )
 
                     try:
-                        code, seconds = run_case(binary, param_file, nprocs)
+                        code, seconds = run_case(binary, param_file, nprocs, log_path)
                     except Exception as exc:
                         code, seconds = -1, 0.0
                         print(f"  [ERROR] {exc}")
@@ -196,6 +206,7 @@ def main() -> None:
 
                     if code != 0:
                         print(f"  [FAIL] Exit code {code} (continuing)")
+                        print(f"         See log: {log_path}")
 
 
 if __name__ == "__main__":
