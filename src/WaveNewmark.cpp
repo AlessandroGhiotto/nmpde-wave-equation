@@ -268,7 +268,7 @@ void WaveNewmark::run()
         old_solution_v = solution_v;
         old_solution_a = solution_a;
 
-        if (timestep_number % log_every == 0)
+        if (log_every > 0 && (timestep_number % log_every == 0))
         {
             compute_and_log_energy();
             compute_and_log_error();

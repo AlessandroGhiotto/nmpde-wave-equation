@@ -1,5 +1,6 @@
 #include "ParameterReader.hpp"
 #include "WaveTheta.hpp"
+#include <cstdlib> // setenv
 
 int main(int argc, char* argv[])
 {
@@ -82,6 +83,16 @@ int main(int argc, char* argv[])
         // If subsection doesn't exist, exact_solution_ptr remains nullptr
     }
 
+    // Export runtime flags (used by WaveEquationBase without changing class APIs).
+    const bool save_solution = prm.get_bool("Save Solution");
+    const bool enable_logging = prm.get_bool("Enable Logging");
+    ::setenv("NMPDE_SAVE_SOLUTION", save_solution ? "1" : "0", 1);
+    // NOTE: logging is controlled solely via log_every (0 disables), no env var.
+
+    int log_every = prm.get_integer("Log Every");
+    if (!enable_logging)
+        log_every = 0;
+
     try
     {
         WaveTheta problem(
@@ -98,7 +109,7 @@ int main(int argc, char* argv[])
             /* initial v */ v0,
             /* u boundary cond */ g,
             /* v buondary cond */ dgdt,
-            /* log every */ prm.get_integer("Log Every"),
+            /* log every */ log_every,
             /* print every */ prm.get_integer("Print Every"),
             /* exact solution */ exact_solution_ptr);
 

@@ -76,6 +76,16 @@ def _mpi_cmd(nprocs: int, binary: Path, param_file: Path) -> list[str]:
     return base + [str(binary), str(param_file)]
 
 
+def _pbs_slots() -> int | None:
+    pbs_nodefile = os.environ.get("PBS_NODEFILE", "")
+    if pbs_nodefile and Path(pbs_nodefile).is_file():
+        try:
+            return sum(1 for _ in Path(pbs_nodefile).read_text(encoding="utf-8").splitlines() if _.strip())
+        except Exception:
+            return None
+    return None
+
+
 def run_case(
     binary: Path, param_file: Path, nprocs: int, log_path: Path
 ) -> tuple[int, float]:
@@ -95,10 +105,29 @@ def run_case(
 
     t0 = time.perf_counter()
     with log_path.open("w", encoding="utf-8") as flog:
+        # Provenance: helps catch host-mpirun vs container-libmpi mismatch immediately
         flog.write(f"CMD: {' '.join(cmd)}\n")
         flog.write(f"CWD: {str(binary.parent)}\n")
         flog.write(f"MPI_LAUNCHER: {MPI_LAUNCHER}\n")
         flog.write(f"PBS_NODEFILE: {os.environ.get('PBS_NODEFILE','')}\n")
+        slots = _pbs_slots()
+        flog.write(f"PBS_SLOTS(from nodefile): {slots}\n")
+        flog.flush()
+
+        if slots is not None and nprocs > slots:
+            flog.write(f"ERROR: requested -np {nprocs} but PBS_NODEFILE advertises {slots} slots\n")
+            flog.flush()
+            return -2, (time.perf_counter() - t0)
+
+        # Best-effort diagnostics (don’t fail the run if these commands fail)
+        try:
+            subprocess.run(["bash", "-lc", "which mpirun && mpirun --version"], stdout=flog, stderr=subprocess.STDOUT, text=True)
+        except Exception:
+            flog.write("WARN: failed to capture mpirun version\n")
+        try:
+            subprocess.run(["bash", "-lc", f"ldd {shlex.quote(str(binary))} | grep -i mpi || true"], stdout=flog, stderr=subprocess.STDOUT, text=True)
+        except Exception:
+            flog.write("WARN: failed to capture ldd/mpi linkage\n")
         flog.flush()
 
         # start_new_session=True lets us kill the whole mpirun process group on timeout/hang.

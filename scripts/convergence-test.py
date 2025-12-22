@@ -13,15 +13,15 @@ R_VALUES = ["1", "2"]
 DT_VALUES = ["0.1", "0.05", "0.01", "0.005", "0.001"]
 T_VALUE = "1.0"
 
-BINARY = Path("../build/main-theta")
-# THETA_VALUE = "0.5" # CN
+# BINARY = Path("../build/main-theta")
+THETA_VALUE = "0.5"  # CN
 # THETA_VALUE = "1.0"  # BE
-THETA_VALUE = "0.0"  # FE
+# THETA_VALUE = "0.0"  # FE
 
-# BINARY = Path("../build/main-newmark")
+BINARY = Path("../build/main-newmark")
 GAMMA_VALUE = "0.5"
-BETA_VALUE = "0.25"  # Average constant acceleration
-# BETA_VALUE = "0.0"  # Explicit central difference scheme
+# BETA_VALUE = "0.25"  # Average constant acceleration
+BETA_VALUE = "0.0"  # Explicit central difference scheme
 
 
 def load_base(path: Path) -> dict:
@@ -38,6 +38,12 @@ def write_temp_params(base: dict, nel: str, r: str, dt: str) -> Path:
     params["Theta"] = THETA_VALUE
     params["Beta"] = BETA_VALUE
     params["Gamma"] = GAMMA_VALUE
+
+    # Disable heavy outputs for convergence sweeps
+    params["Save Solution"] = False  # no VTU/PVTU
+    params["Enable Logging"] = False  # disable time-series logs
+    params["Log Every"] = 0  # ensure energy/error not computed/logged
+
     with BASE_PARAM.open("w", encoding="utf-8") as f:
         json.dump(params, f, indent=2)
     return BASE_PARAM

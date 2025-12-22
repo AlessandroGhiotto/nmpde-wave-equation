@@ -49,10 +49,18 @@ void ParameterReader::declare_scalar_parameters()
                       "0.01",
                       Patterns::Double(0.0),
                       "Length of the time step");
+    prm.declare_entry("Save Solution",
+                      "true",
+                      Patterns::Bool(),
+                      "If true, write VTU/PVTU output (u, v and u_exact when available). If false, skip solution output.");
+    prm.declare_entry("Enable Logging",
+                      "true",
+                      Patterns::Bool(),
+                      "If true, write energy/error CSV logs. If false, disable time-series logging (equivalent to Log Every = 0).");
     prm.declare_entry("Log Every",
                       "10",
-                      Patterns::Integer(1),
-                      "Log energy every n timesteps");
+                      Patterns::Integer(0),
+                      "Log energy/error every n timesteps. Use 0 to disable logging.");
     prm.declare_entry("Print Every",
                       "10",
                       Patterns::Integer(1),

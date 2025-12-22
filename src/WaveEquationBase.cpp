@@ -1,4 +1,21 @@
 #include "WaveEquationBase.hpp"
+#include <cstdlib> // getenv
+
+namespace
+{
+bool env_flag_enabled(const char* name, const bool default_value)
+{
+    const char* v = std::getenv(name);
+    if (!v)
+        return default_value;
+    const std::string s(v);
+    if (s == "0" || s == "false" || s == "FALSE" || s == "False")
+        return false;
+    if (s == "1" || s == "true" || s == "TRUE" || s == "True")
+        return true;
+    return default_value;
+}
+} // namespace
 
 void WaveEquationBase::setup_mesh()
 {
@@ -94,21 +111,17 @@ void WaveEquationBase::prepare_output_filename(const std::string& method_params)
             }
         }
 
-        energy_log_file.open(output_folder + "energy.csv");
-        if (energy_log_file.is_open())
-            energy_log_file << "timestep,time,energy" << std::endl;
+        // NOTE: energy/error CSV files are opened lazily in compute_and_log_*()
+        // so log_every=0 produces no files.
 
         if (exact_solution != nullptr)
         {
-            error_log_file.open(output_folder + "error.csv");
-            if (error_log_file.is_open())
-                error_log_file << "timestep,time,L2_error,H1_error,rel_L2_error,rel_H1_error" << std::endl;
-
+            // Keep convergence file independent of time-series logging.
             std::string convergence_file_path = "../results/" + problem_name + "/convergence.csv";
             bool file_exists = std::filesystem::exists(convergence_file_path);
             convergence_file.open(convergence_file_path, std::ios_base::app);
             if (convergence_file.is_open() && !file_exists)
-                convergence_file << "h,N_el_x,N_el_y,r,dt,T,method,theta,beta,gamma,rel_L2_error_avg,rel_H1_error_avg,elapsed_time_s" << std::endl;
+                convergence_file << "h,N_el_x,N_el_y,r,dt,T,method,theta,beta,gamma,rel_L2_error_final,rel_H1_error_final,elapsed_time_s" << std::endl;
         }
     }
 }
@@ -121,8 +134,18 @@ void WaveEquationBase::compute_and_log_energy()
     mass_matrix.vmult(tmp_v, solution_v);
     current_energy = 0.5 * (tmp_v * solution_v + tmp_u * solution_u);
 
-    if (mpi_rank == 0 && energy_log_file.is_open())
-        energy_log_file << timestep_number << "," << time << "," << current_energy << std::endl;
+    if (mpi_rank == 0)
+    {
+        if (!energy_log_file.is_open())
+        {
+            energy_log_file.open(output_folder + "energy.csv");
+            if (energy_log_file.is_open())
+                energy_log_file << "timestep,time,energy" << std::endl;
+        }
+
+        if (energy_log_file.is_open())
+            energy_log_file << timestep_number << "," << time << "," << current_energy << std::endl;
+    }
 }
 
 void WaveEquationBase::compute_and_log_error()
@@ -137,17 +160,25 @@ void WaveEquationBase::compute_and_log_error()
     const double rel_error_L2 = compute_relative_error(error_L2, VectorTools::L2_norm, *exact_solution);
     const double rel_error_H1 = compute_relative_error(error_H1, VectorTools::H1_norm, *exact_solution);
 
-    if (mpi_rank == 0 && error_log_file.is_open())
+    if (mpi_rank == 0)
     {
-        error_log_file << timestep_number << "," << time << ","
-                       << std::scientific << std::setprecision(6)
-                       << error_L2 << "," << error_H1 << ","
-                       << rel_error_L2 << "," << rel_error_H1 << std::endl;
+        if (!error_log_file.is_open())
+        {
+            error_log_file.open(output_folder + "error.csv");
+            if (error_log_file.is_open())
+                error_log_file << "timestep,time,L2_error,H1_error,rel_L2_error,rel_H1_error" << std::endl;
+        }
+
+        if (error_log_file.is_open())
+        {
+            error_log_file << timestep_number << "," << time << ","
+                           << std::scientific << std::setprecision(6)
+                           << error_L2 << "," << error_H1 << ","
+                           << rel_error_L2 << "," << rel_error_H1 << std::endl;
+        }
     }
 
-    accumulated_L2_error += rel_error_L2;
-    accumulated_H1_error += rel_error_H1;
-    error_sample_count++;
+    // NOTE: no accumulation/averaging; final error computed at the end.
 }
 
 void WaveEquationBase::compute_final_errors()
@@ -159,11 +190,16 @@ void WaveEquationBase::compute_final_errors(const std::string& theta_str,
                                             const std::string& beta_str,
                                             const std::string& gamma_str)
 {
-    if (exact_solution == nullptr || error_sample_count == 0)
+    if (exact_solution == nullptr)
         return;
 
-    const double avg_L2_error = accumulated_L2_error / error_sample_count;
-    const double avg_H1_error = accumulated_H1_error / error_sample_count;
+    // Recompute the error at the final (current) time using the final (current) solution.
+    exact_solution->set_time(time);
+
+    const double error_L2 = compute_error(VectorTools::L2_norm, *exact_solution);
+    const double error_H1 = compute_error(VectorTools::H1_norm, *exact_solution);
+    const double rel_error_L2 = compute_relative_error(error_L2, VectorTools::L2_norm, *exact_solution);
+    const double rel_error_H1 = compute_relative_error(error_H1, VectorTools::H1_norm, *exact_solution);
 
     if (mpi_rank == 0 && convergence_file.is_open())
     {
@@ -174,15 +210,15 @@ void WaveEquationBase::compute_final_errors(const std::string& theta_str,
                          << (beta_str.empty() ? "N/A" : beta_str) << ","
                          << (gamma_str.empty() ? "N/A" : gamma_str) << ",";
         convergence_file << std::scientific << std::setprecision(6)
-                         << avg_L2_error << "," << avg_H1_error << ",";
+                         << rel_error_L2 << "," << rel_error_H1 << ",";
         convergence_file << std::fixed << std::setprecision(3)
                          << simulation_time << std::endl;
 
-        pcout << "Average errors over time:" << std::endl;
-        pcout << "  Average Relative L2 error  = "
-              << std::scientific << std::setprecision(6) << avg_L2_error << std::endl;
-        pcout << "  Average Relative H1 error  = "
-              << std::scientific << std::setprecision(6) << avg_H1_error << std::endl;
+        pcout << "Final (last-iteration) errors:" << std::endl;
+        pcout << "  Relative L2 error  = "
+              << std::scientific << std::setprecision(6) << rel_error_L2 << std::endl;
+        pcout << "  Relative H1 error  = "
+              << std::scientific << std::setprecision(6) << rel_error_H1 << std::endl;
     }
 }
 
@@ -199,6 +235,10 @@ void WaveEquationBase::print_step_info()
 
 void WaveEquationBase::output() const
 {
+    const bool save_solution = env_flag_enabled("NMPDE_SAVE_SOLUTION", true);
+    if (!save_solution)
+        return;
+
     DataOut<dim> data_out;
     data_out.add_data_vector(dof_handler, solution_u, "u");
     data_out.add_data_vector(dof_handler, solution_v, "v");

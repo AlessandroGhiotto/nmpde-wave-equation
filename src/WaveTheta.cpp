@@ -339,7 +339,7 @@ void WaveTheta::run()
         old_solution_u = solution_u;
         old_solution_v = solution_v;
 
-        if (timestep_number % log_every == 0)
+        if (log_every > 0 && (timestep_number % log_every == 0))
         {
             compute_and_log_energy();
             compute_and_log_error();

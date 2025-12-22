@@ -110,8 +110,6 @@ class WaveEquationBase
 
     // Monitoring variables
     double current_energy;
-    double accumulated_L2_error = 0.0;
-    double accumulated_H1_error = 0.0;
     unsigned int error_sample_count = 0;
     double simulation_time = 0.0;
 
