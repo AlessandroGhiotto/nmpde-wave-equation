@@ -93,6 +93,8 @@ int main(int argc, char* argv[])
     if (!enable_logging)
         log_every = 0;
 
+    ::setenv("NMPDE_LOG_EVERY", std::to_string(log_every).c_str(), 1);
+
     // Check if exact_solution was initialized, if not set it to nullptr
     Function<dim>* exact_solution_ptr = nullptr;
     try

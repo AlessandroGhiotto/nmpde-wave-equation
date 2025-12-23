@@ -228,8 +228,12 @@ void WaveEquationBase::print_step_info()
     oss << "Step " << std::setw(6) << timestep_number
         << ",  t=" << std::scientific << std::setprecision(3) << std::setw(9) << time
         << ",  ||u||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_u.l2_norm()
-        << ",  ||v||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_v.l2_norm()
-        << ",  E=" << std::scientific << std::setprecision(3) << std::setw(9) << current_energy;
+        << ",  ||v||=" << std::scientific << std::setprecision(3) << std::setw(9) << solution_v.l2_norm();
+
+    const char* env_p = std::getenv("NMPDE_LOG_EVERY");
+    if (!env_p || std::atoi(env_p) != 0)
+        oss << ",  E=" << std::scientific << std::setprecision(3) << std::setw(9) << current_energy;
+
     pcout << oss.str() << std::endl;
 }
 
