@@ -134,7 +134,8 @@ void WaveNewmark::assemble_rhs()
     TrilinosWrappers::MPI::Vector rhs_f(system_rhs);
     rhs_f = 0.0;
 
-    f.set_time(time + delta_t);
+    // Evaluate forcing term at t^{n+1}
+    f.set_time(time);
 
     for (const auto& cell : dof_handler.active_cell_iterators())
     {
@@ -162,39 +163,56 @@ void WaveNewmark::assemble_rhs()
     system_rhs.compress(VectorOperation::add);
 }
 
-void WaveNewmark::apply_dirichlet_bc()
+void WaveNewmark::solve_a()
 {
-    // Apply u = g(t) on the boundary
+    // Create a temporary system matrix to apply BCs without destroying the global matrix_a
+    TrilinosWrappers::SparseMatrix system_matrix;
+    system_matrix.reinit(matrix_a);
+    system_matrix.copy_from(matrix_a);
+
+    // Calculate boundary values for acceleration a^{n+1} derived from u^{n+1} = g(t^{n+1})
+    // u^{n+1} = u_pred + beta * dt^2 * a^{n+1}
+    // => a^{n+1} = (g(t^{n+1}) - u_pred) / (beta * dt^2)
+
+    std::map<types::global_dof_index, double> boundary_values_a;
     std::map<types::global_dof_index, double> boundary_values_u;
+
     g.set_time(time);
 
     for (const auto id : mesh.get_boundary_ids())
         VectorTools::interpolate_boundary_values(dof_handler, id, g, boundary_values_u);
 
-    TrilinosWrappers::MPI::Vector dummy_rhs;
-    MatrixTools::apply_boundary_values(boundary_values_u, mass_matrix,
-                                       solution_u, dummy_rhs, false);
+    const double beta_dt2 = beta * delta_t * delta_t;
 
-    // Apply v = dg/dt(t) on the boundary
-    std::map<types::global_dof_index, double> boundary_values_v;
-    dgdt.set_time(time);
+    // Assuming implicit Newmark (beta > 0)
+    if (beta > 1e-12)
+    {
+        for (const auto& bv : boundary_values_u)
+        {
+            const types::global_dof_index dof = bv.first;
+            const double g_val = bv.second;
 
-    for (const auto id : mesh.get_boundary_ids())
-        VectorTools::interpolate_boundary_values(dof_handler, id, dgdt, boundary_values_v);
+            // u_pred = u^n + dt * v^n + dt^2 * (0.5 - beta) * a^n
+            const double u_pred = old_solution_u(dof) +
+                                  delta_t * old_solution_v(dof) +
+                                  delta_t * delta_t * (0.5 - beta) * old_solution_a(dof);
 
-    MatrixTools::apply_boundary_values(boundary_values_v, mass_matrix,
-                                       solution_v, dummy_rhs, false);
-}
+            boundary_values_a[dof] = (g_val - u_pred) / beta_dt2;
+        }
+    }
 
-void WaveNewmark::solve_a()
-{
+    // Apply boundary values to the system matrix and RHS
+    // eliminate_columns = true preserves symmetry for CG solver
+    MatrixTools::apply_boundary_values(boundary_values_a, system_matrix,
+                                       solution_a, system_rhs, true);
+
     TrilinosWrappers::PreconditionSSOR preconditioner;
-    preconditioner.initialize(matrix_a, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+    preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    solver.solve(matrix_a, solution_a, system_rhs, preconditioner);
+    solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
 }
 
 void WaveNewmark::update_u_v()
@@ -251,9 +269,8 @@ void WaveNewmark::run()
         ++timestep_number;
 
         assemble_rhs();
-        solve_a();
+        solve_a(); // this also handle the BCs
         update_u_v();
-        apply_dirichlet_bc();
 
         const double norm_u = solution_u.l2_norm();
         const double norm_v = solution_v.l2_norm();
