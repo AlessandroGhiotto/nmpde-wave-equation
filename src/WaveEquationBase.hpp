@@ -98,8 +98,6 @@ class WaveEquationBase
     std::ofstream error_log_file;
     std::ofstream convergence_file;
     std::ofstream iterations_log_file;
-    unsigned int current_iterations_u;
-    unsigned int current_iterations_v;
 
     // Mesh parameters
     std::pair<unsigned int, unsigned int> N_el;

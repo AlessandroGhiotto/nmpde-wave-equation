@@ -214,7 +214,7 @@ void WaveNewmark::solve_a()
 
     solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
 
-    current_iterations_u = solver_control.last_step();
+    current_iterations = solver_control.last_step();
 }
 
 void WaveNewmark::update_u_v()
@@ -291,7 +291,7 @@ void WaveNewmark::run()
         {
             compute_and_log_energy();
             compute_and_log_error();
-            log_iterations(current_iterations_u, 0);
+            log_iterations(current_iterations, 0);
         }
 
         if (timestep_number % print_every == 0)

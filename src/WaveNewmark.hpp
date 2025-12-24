@@ -59,6 +59,8 @@ class WaveNewmark : public WaveEquationBase
 
     // System matrix (specific to Newmark)
     TrilinosWrappers::SparseMatrix matrix_a;
+
+    unsigned int current_iterations;
 };
 
 #endif

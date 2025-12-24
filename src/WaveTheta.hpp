@@ -53,6 +53,9 @@ class WaveTheta : public WaveEquationBase
     // System matrices (specific to theta-method)
     TrilinosWrappers::SparseMatrix matrix_u;
     TrilinosWrappers::SparseMatrix matrix_v;
+
+    unsigned int current_iterations_u;
+    unsigned int current_iterations_v;
 };
 
 // Equation Data (keep existing template classes)
