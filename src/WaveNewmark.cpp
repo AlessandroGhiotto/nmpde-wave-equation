@@ -213,6 +213,8 @@ void WaveNewmark::solve_a()
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
     solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
+
+    current_iterations_u = solver_control.last_step();
 }
 
 void WaveNewmark::update_u_v()
@@ -289,6 +291,7 @@ void WaveNewmark::run()
         {
             compute_and_log_energy();
             compute_and_log_error();
+            log_iterations(current_iterations_u, 0);
         }
 
         if (timestep_number % print_every == 0)
@@ -320,5 +323,7 @@ void WaveNewmark::run()
             error_log_file.close();
         if (convergence_file.is_open())
             convergence_file.close();
+        if (iterations_log_file.is_open())
+            iterations_log_file.close();
     }
 }

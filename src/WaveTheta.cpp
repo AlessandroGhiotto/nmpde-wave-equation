@@ -274,6 +274,8 @@ void WaveTheta::solve_u()
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
     solver.solve(matrix_u, solution_u, system_rhs, preconditioner);
+
+    current_iterations_u = solver_control.last_step();
 }
 
 void WaveTheta::solve_v()
@@ -285,6 +287,8 @@ void WaveTheta::solve_v()
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
     solver.solve(matrix_v, solution_v, system_rhs, preconditioner);
+
+    current_iterations_v = solver_control.last_step();
 }
 
 void WaveTheta::run()
@@ -343,6 +347,7 @@ void WaveTheta::run()
         {
             compute_and_log_energy();
             compute_and_log_error();
+            log_iterations(current_iterations_u, current_iterations_v);
         }
 
         if (timestep_number % print_every == 0)
@@ -374,5 +379,7 @@ void WaveTheta::run()
             error_log_file.close();
         if (convergence_file.is_open())
             convergence_file.close();
+        if (iterations_log_file.is_open())
+            iterations_log_file.close();
     }
 }

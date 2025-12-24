@@ -148,6 +148,23 @@ void WaveEquationBase::compute_and_log_energy()
     }
 }
 
+void WaveEquationBase::log_iterations(const unsigned int n_iterations_1, const unsigned int n_iterations_2)
+{
+    if (mpi_rank == 0)
+    {
+        if (!iterations_log_file.is_open())
+        {
+            iterations_log_file.open(output_folder + "iterations.csv");
+            if (iterations_log_file.is_open())
+                iterations_log_file << "timestep,time,iterations_1,iterations_2" << std::endl;
+        }
+
+        if (iterations_log_file.is_open())
+            iterations_log_file << timestep_number << "," << time << ","
+                                << n_iterations_1 << "," << n_iterations_2 << std::endl;
+    }
+}
+
 void WaveEquationBase::compute_and_log_error()
 {
     if (exact_solution == nullptr)
