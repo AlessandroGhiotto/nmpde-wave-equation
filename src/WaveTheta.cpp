@@ -169,23 +169,7 @@ void WaveTheta::assemble_rhs_u()
     system_rhs.add(1.0, rhs_f);
     system_rhs.compress(VectorOperation::add);
 
-    // Dirichlet boundary conditions
-    {
-        g.set_time(time + delta_t);
-
-        std::map<types::global_dof_index, double> boundary_values_u;
-        std::map<types::boundary_id, const Function<dim>*> boundary_functions_u;
-
-        for (const auto id : mesh.get_boundary_ids())
-            boundary_functions_u[id] = &g;
-
-        VectorTools::interpolate_boundary_values(dof_handler,
-                                                 boundary_functions_u,
-                                                 boundary_values_u);
-
-        MatrixTools::apply_boundary_values(
-            boundary_values_u, matrix_u, solution_u, system_rhs, true);
-    }
+    // Dirichlet boundary conditions moved to solve_u to avoid modifying matrix_u
 }
 
 void WaveTheta::assemble_rhs_v()
@@ -246,6 +230,52 @@ void WaveTheta::assemble_rhs_v()
     system_rhs.add(1.0, rhs_f);
     system_rhs.compress(VectorOperation::add);
 
+    // Boundary condition moved to solve_v to avoid modifying matrix_v
+}
+
+void WaveTheta::solve_u()
+{
+    // Create a temporary system matrix to apply BCs without destroying the global matrix_u
+    TrilinosWrappers::SparseMatrix system_matrix;
+    system_matrix.reinit(matrix_u);
+    system_matrix.copy_from(matrix_u);
+
+    // Dirichlet boundary conditions
+    {
+        g.set_time(time + delta_t);
+
+        std::map<types::global_dof_index, double> boundary_values_u;
+        std::map<types::boundary_id, const Function<dim>*> boundary_functions_u;
+
+        for (const auto id : mesh.get_boundary_ids())
+            boundary_functions_u[id] = &g;
+
+        VectorTools::interpolate_boundary_values(dof_handler,
+                                                 boundary_functions_u,
+                                                 boundary_values_u);
+
+        MatrixTools::apply_boundary_values(
+            boundary_values_u, system_matrix, solution_u, system_rhs, true);
+    }
+
+    TrilinosWrappers::PreconditionSSOR preconditioner;
+    preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+
+    ReductionControl solver_control(10000, 1e-12, 1e-6);
+    SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
+
+    solver.solve(system_matrix, solution_u, system_rhs, preconditioner);
+
+    current_iterations_u = solver_control.last_step();
+}
+
+void WaveTheta::solve_v()
+{
+    // Create a temporary system matrix to apply BCs without destroying the global matrix_v
+    TrilinosWrappers::SparseMatrix system_matrix;
+    system_matrix.reinit(matrix_v);
+    system_matrix.copy_from(matrix_v);
+
     // Boundary condition
     {
         dgdt.set_time(time + delta_t);
@@ -261,32 +291,16 @@ void WaveTheta::assemble_rhs_v()
                                                  boundary_values_v);
 
         MatrixTools::apply_boundary_values(
-            boundary_values_v, matrix_v, solution_v, system_rhs, true);
+            boundary_values_v, system_matrix, solution_v, system_rhs, true);
     }
-}
 
-void WaveTheta::solve_u()
-{
     TrilinosWrappers::PreconditionSSOR preconditioner;
-    preconditioner.initialize(matrix_u, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+    preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    solver.solve(matrix_u, solution_u, system_rhs, preconditioner);
-
-    current_iterations_u = solver_control.last_step();
-}
-
-void WaveTheta::solve_v()
-{
-    TrilinosWrappers::PreconditionSSOR preconditioner;
-    preconditioner.initialize(matrix_v, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
-
-    ReductionControl solver_control(10000, 1e-12, 1e-6);
-    SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
-
-    solver.solve(matrix_v, solution_v, system_rhs, preconditioner);
+    solver.solve(system_matrix, solution_v, system_rhs, preconditioner);
 
     current_iterations_v = solver_control.last_step();
 }
