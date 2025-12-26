@@ -82,6 +82,8 @@ void WaveEquationBase::prepare_output_filename(const std::string& method_params)
                     "-N" + std::to_string(N_el.first) + "x" + std::to_string(N_el.second) +
                     "-dt" + clean_double(delta_t) + "-T" + clean_double(T) + method_params + "/";
 
+    pcout << "Output folder: " << output_folder << std::endl;
+
     if (mpi_rank == 0)
     {
         if (!std::filesystem::exists(output_folder))
