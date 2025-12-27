@@ -12,7 +12,7 @@ echo "Job started on $(date)"
 echo "Node(s):"
 cat "$PBS_NODEFILE"
 
-python scalability-test.py
+apptainer exec ../../amsc_mk_2025.sif /bin/bash -c "source /u/sw/etc/bash.bashrc && module load gcc-glibc dealii && python scalability-test.py"
 
 cp scalability-results.csv /home/u11177200/
 
