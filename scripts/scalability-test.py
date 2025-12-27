@@ -11,7 +11,7 @@ from pathlib import Path
 BASE_PARAM = Path("../parameters/standing-mode-wsol.json")
 MPI_PROCS = [1, 2, 4, 8, 16]
 
-NEL_VALUES = ["10"]
+NEL_VALUES = ["320"]
 R_VALUES = ["1"]
 DT_VALUES = ["0.005"]
 T_VALUE = "5.0"
@@ -39,6 +39,7 @@ def write_temp_params(
     params["R"] = str(r)
     params["Dt"] = str(dt)
     params["T"] = T_VALUE
+    params["Print Every"] = "200"
 
     # apply scheme-specific parameters (e.g., Theta or Beta/Gamma)
     params.update(overrides)

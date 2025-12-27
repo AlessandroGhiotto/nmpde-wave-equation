@@ -1,25 +1,19 @@
 #!/bin/bash
 #PBS -N scalability-test
 #PBS -q cpu
-#PBS -l select=1:ncpus=16:mpiprocs=16
-#PBS -l walltime=02:00:00
+#PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu01
+#PBS -l walltime=24:00:00
 #PBS -o scalability.out
 #PBS -e scalability.err
 
-cd "$PBS_O_WORKDIR"
+cd /tmp/nmpde-wave-equation/scripts
 
 echo "Job started on $(date)"
 echo "Node(s):"
 cat "$PBS_NODEFILE"
 
-CONTAINER="../../amsc_mk_2025.sif"
+python scalability-test.py
 
-apptainer exec \
-  "$CONTAINER" \
-  /bin/bash -lc "
-    source /u/sw/etc/bash.bashrc
-    module load gcc-glibc dealii
-    python3 ../scripts/scalability-test.py
-  "
+cp scalability-results.csv /home/u11177200/
 
 echo "Job finished on $(date)"
