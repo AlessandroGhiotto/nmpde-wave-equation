@@ -6,14 +6,38 @@
 #PBS -o scalability.out
 #PBS -e scalability.err
 
-cd /tmp/nmpde-wave-equation/scripts
+# Define paths
+WORK_DIR="/tmp/nmpde-wave-equation/scripts"
+SOURCE_DIR="$PBS_O_WORKDIR"
+RESULT_FILE="scalability-results.csv"
+DEST_DIR="/home/u11177200/"
 
 echo "Job started on $(date)"
 echo "Node(s):"
 cat "$PBS_NODEFILE"
 
-apptainer exec ../../amsc_mk_2025.sif /bin/bash -c "source /u/sw/etc/bash.bashrc && module load gcc-glibc dealii && python scalability-test.py"
+# Load environment modules (required for binaries and mpirun)
+# source /u/sw/etc/bash.bashrc
+# module load gcc-glibc dealii
 
-cp scalability-results.csv /home/u11177200/
+# Clean up previous run in /tmp to ensure a fresh copy
+rm -rf "/tmp/nmpde-wave-equation"
+
+# Copy the parent directory (project root) to /tmp
+# This preserves the structure: /tmp/nmpde-wave-equation/{scripts,parameters,build}
+cp -r "$SOURCE_DIR/.." "/tmp/"
+
+cd "$WORK_DIR"
+
+# Run the python script
+python3 scalability-test.py
+
+# Copy the output file back
+if [ -f "$RESULT_FILE" ]; then
+    cp "$RESULT_FILE" "$DEST_DIR"
+    echo "Results copied to $DEST_DIR"
+else
+    echo "Result file not found!"
+fi
 
 echo "Job finished on $(date)"
