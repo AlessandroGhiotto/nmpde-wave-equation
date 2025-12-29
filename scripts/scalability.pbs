@@ -22,8 +22,8 @@ echo "Node(s):"
 cat "$PBS_NODEFILE"
 
 # Load environment modules (required for binaries and mpirun)
-source /u/sw/etc/bash.bashrc
-module load gcc-glibc dealii
+# source /u/sw/etc/bash.bashrc
+# module load gcc-glibc dealii
 
 # Clean up previous run in /scratch_local to ensure a fresh copy
 rm -rf "$SCRATCH_ROOT"

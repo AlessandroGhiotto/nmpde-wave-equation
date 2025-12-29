@@ -1,0 +1,15 @@
+scheme,binary,nprocs,Nel,R,Dt,T,Theta,Beta,Gamma,returncode,seconds
+theta,../build/main-theta,1,320,1,0.005,5.0,0.5,,,0,1154.718211
+theta,../build/main-theta,2,320,1,0.005,5.0,0.5,,,0,1331.242142
+theta,../build/main-theta,4,320,1,0.005,5.0,0.5,,,0,862.773562
+theta,../build/main-theta,8,320,1,0.005,5.0,0.5,,,0,690.114973
+theta,../build/main-theta,16,320,1,0.005,5.0,0.5,,,0,146.803136
+newmark,../build/main-newmark,1,320,1,0.005,5.0,,0.25,0.5,0,942.756187
+newmark,../build/main-newmark,2,320,1,0.005,5.0,,0.25,0.5,0,896.993097
+newmark,../build/main-newmark,4,320,1,0.005,5.0,,0.25,0.5,0,513.704439
+newmark,../build/main-newmark,8,320,1,0.005,5.0,,0.25,0.5,0,426.964584
+newmark,../build/main-newmark,16,320,1,0.005,5.0,,0.25,0.5,0,105.322368
+
+
+
+

@@ -49,7 +49,18 @@ def write_temp_params(
 
 
 def run_case(binary: Path, param_file: Path, nprocs: int) -> tuple[int, float]:
-    cmd = ["mpirun", "-n", str(nprocs), str(binary), str(param_file)]
+    cmd = [
+        "mpirun",
+        "-np",
+        str(nprocs),
+        "--bind-to",
+        "core",
+        "--map-by",
+        "ppr:1:core",
+        str(binary),
+        str(param_file),
+    ]
+
     print(f"[RUN] {' '.join(cmd)}")
     t0 = time.perf_counter()
     result = subprocess.run(cmd)
