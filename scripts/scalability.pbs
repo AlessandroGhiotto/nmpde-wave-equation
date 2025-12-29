@@ -3,34 +3,44 @@
 #PBS -q cpu
 #PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu01
 #PBS -l walltime=24:00:00
-#PBS -o scalability.out
-#PBS -e scalability.err
+#PBS -j oe
+#PBS -o scalability_manual.out
 
 # Define paths
-WORK_DIR="/tmp/nmpde-wave-equation/scripts"
+WORK_DIR="/scratch_local/nmpde-wave-equation/scripts"
 SOURCE_DIR="$PBS_O_WORKDIR"
+PROJECT_ROOT="$SOURCE_DIR/.."
+SCRATCH_ROOT="/scratch_local/nmpde-wave-equation"
 RESULT_FILE="scalability-results.csv"
-DEST_DIR="/home/u11177200/"
+DEST_DIR="/home/u11177200/nmpde-wave-equation/scripts/" 
+
+# Redirect stdout/stderr to a file in the source directory to debug missing PBS output
+exec > "${SOURCE_DIR}/scalability_run.log" 2>&1
 
 echo "Job started on $(date)"
 echo "Node(s):"
 cat "$PBS_NODEFILE"
 
 # Load environment modules (required for binaries and mpirun)
-# source /u/sw/etc/bash.bashrc
-# module load gcc-glibc dealii
+source /u/sw/etc/bash.bashrc
+module load gcc-glibc dealii
 
-# Clean up previous run in /tmp to ensure a fresh copy
-rm -rf "/tmp/nmpde-wave-equation"
+# Clean up previous run in /scratch_local to ensure a fresh copy
+rm -rf "$SCRATCH_ROOT"
+mkdir -p "$SCRATCH_ROOT"
 
-# Copy the parent directory (project root) to /tmp
-# This preserves the structure: /tmp/nmpde-wave-equation/{scripts,parameters,build}
-cp -r "$SOURCE_DIR/.." "/tmp/"
+# Copy specific folders to avoid .git and permission issues
+# We explicitly copy only what is needed: scripts, parameters, build
+echo "Copying files to scratch..."
+cp -r "$PROJECT_ROOT/scripts" "$SCRATCH_ROOT/"
+cp -r "$PROJECT_ROOT/parameters" "$SCRATCH_ROOT/"
+cp -r "$PROJECT_ROOT/build" "$SCRATCH_ROOT/"
 
-cd "$WORK_DIR"
+
+cd "$WORK_DIR" || { echo "Failed to cd to $WORK_DIR"; exit 1; }
 
 # Run the python script
-python3 scalability-test.py
+python3 -u scalability-test.py
 
 # Copy the output file back
 if [ -f "$RESULT_FILE" ]; then
