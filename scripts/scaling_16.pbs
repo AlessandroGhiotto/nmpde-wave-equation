@@ -1,0 +1,35 @@
+#!/bin/bash
+#PBS -N scaling_p16
+#PBS -q cpu
+#PBS -l select=1:ncpus=16:mpiprocs=16
+#PBS -l walltime=24:00:00
+#PBS -j oe
+#PBS -o scaling_p16.out
+
+SOURCE_DIR="$PBS_O_WORKDIR"
+PROJECT_ROOT="$SOURCE_DIR/.."
+
+SCRATCH_ROOT="/scratch_local/nmpde-wave-equation_${PBS_JOBID}"
+WORK_DIR="$SCRATCH_ROOT/scripts"
+DEST_DIR="/home/u11177200/nmpde-wave-equation/scripts"
+
+exec > "${SOURCE_DIR}/scaling_p16.log" 2>&1
+
+echo "Job started on $(date)"
+cat "$PBS_NODEFILE"
+
+rm -rf "$SCRATCH_ROOT"
+mkdir -p "$SCRATCH_ROOT"
+
+echo "Copying project to scratch..."
+cp -r "$PROJECT_ROOT/scripts"    "$SCRATCH_ROOT/"
+cp -r "$PROJECT_ROOT/parameters" "$SCRATCH_ROOT/"
+cp -r "$PROJECT_ROOT/build"      "$SCRATCH_ROOT/"
+
+cd "$WORK_DIR" || exit 1
+
+python3 -u scalability_single.py --nprocs 16
+
+cp scalability-results-16.csv "$DEST_DIR/"
+
+echo "Job finished on $(date)"
