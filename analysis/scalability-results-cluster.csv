@@ -9,7 +9,16 @@ newmark,../build/main-newmark,2,320,1,0.005,5.0,,0.25,0.5,0,896.993097
 newmark,../build/main-newmark,4,320,1,0.005,5.0,,0.25,0.5,0,513.704439
 newmark,../build/main-newmark,8,320,1,0.005,5.0,,0.25,0.5,0,426.964584
 newmark,../build/main-newmark,16,320,1,0.005,5.0,,0.25,0.5,0,105.322368
+theta,../build/main-theta,1,1000,1,0.005,3.0,0.5,,,0,6592.843766
+theta,../build/main-theta,2,1000,1,0.005,3.0,0.5,,,0,8307.026648
+theta,../build/main-theta,4,1000,1,0.005,3.0,0.5,,,0,4975.216702
+theta,../build/main-theta,8,1000,1,0.005,3.0,0.5,,,0,2964.886590
+theta,../build/main-theta,16,1000,1,0.005,3.0,0.5,,,0,1840.007164
+newmark,../build/main-newmark,1,1000,1,0.005,3.0,,0.25,0.5,0,5626.339183
+newmark,../build/main-newmark,2,1000,1,0.005,3.0,,0.25,0.5,0,6593.351659
+newmark,../build/main-newmark,4,1000,1,0.005,3.0,,0.25,0.5,0,3980.171648
+newmark,../build/main-newmark,8,1000,1,0.005,3.0,,0.25,0.5,0,2347.609895
+newmark,../build/main-newmark,16,1000,1,0.005,3.0,,0.25,0.5,0,1499.490262
 
 
-
-
+    

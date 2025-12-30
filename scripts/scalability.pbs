@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -N scalability-test
 #PBS -q cpu
-#PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu01
+#PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu05
 #PBS -l walltime=24:00:00
 #PBS -j oe
 #PBS -o scalability_manual.out
@@ -20,10 +20,6 @@ exec > "${SOURCE_DIR}/scalability_run.log" 2>&1
 echo "Job started on $(date)"
 echo "Node(s):"
 cat "$PBS_NODEFILE"
-
-# Load environment modules (required for binaries and mpirun)
-# source /u/sw/etc/bash.bashrc
-# module load gcc-glibc dealii
 
 # Clean up previous run in /scratch_local to ensure a fresh copy
 rm -rf "$SCRATCH_ROOT"
