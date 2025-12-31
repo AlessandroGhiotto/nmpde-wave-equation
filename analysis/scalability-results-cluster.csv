@@ -9,6 +9,7 @@ newmark,../build/main-newmark,2,320,1,0.005,5.0,,0.25,0.5,0,896.993097
 newmark,../build/main-newmark,4,320,1,0.005,5.0,,0.25,0.5,0,513.704439
 newmark,../build/main-newmark,8,320,1,0.005,5.0,,0.25,0.5,0,426.964584
 newmark,../build/main-newmark,16,320,1,0.005,5.0,,0.25,0.5,0,105.322368
+
 theta,../build/main-theta,1,1000,1,0.005,3.0,0.5,,,0,6592.843766
 theta,../build/main-theta,2,1000,1,0.005,3.0,0.5,,,0,8307.026648
 theta,../build/main-theta,4,1000,1,0.005,3.0,0.5,,,0,4975.216702
@@ -21,4 +22,28 @@ newmark,../build/main-newmark,8,1000,1,0.005,3.0,,0.25,0.5,0,2347.609895
 newmark,../build/main-newmark,16,1000,1,0.005,3.0,,0.25,0.5,0,1499.490262
 
 
-    
+
+theta,../build/main-theta,1,320,1,0.005,5.0,0.5,,,0,5770.921645
+theta,../build/main-theta,2,320,1,0.005,5.0,0.5,,,0,7702.795804
+theta,../build/main-theta,4,320,1,0.005,5.0,0.5,,,0,6350.263537
+theta,../build/main-theta,8,320,1,0.005,5.0,0.5,,,0,4841.221692
+theta,../build/main-theta,16,320,1,0.005,5.0,0.5,,,0,1245.708815
+newmark,../build/main-newmark,1,320,1,0.005,5.0,,0.25,0.5,0,4210.855811
+newmark,../build/main-newmark,2,320,1,0.005,5.0,,0.25,0.5,0,2641.659308
+newmark,../build/main-newmark,4,320,1,0.005,5.0,,0.25,0.5,0,3115.371041
+newmark,../build/main-newmark,8,320,1,0.005,5.0,,0.25,0.5,0,2832.478513
+newmark,../build/main-newmark,16,320,1,0.005,5.0,,0.25,0.5,0,665.816538
+
+theta,../build/main-theta,1,1000,1,0.005,3.0,0.5,,,0,31479.932002
+theta,../build/main-theta,2,1000,1,0.005,3.0,0.5,,,0,36534.697125
+theta,../build/main-theta,4,1000,1,0.005,3.0,0.5,,,0,20512.421636
+theta,../build/main-theta,8,1000,1,0.005,3.0,0.5,,,0,11423.339747
+theta,../build/main-theta,16,1000,1,0.005,3.0,0.5,,,0,7191.764396
+newmark,../build/main-newmark,1,1000,1,0.005,3.0,,0.25,0.5,0,13635.638065
+newmark,../build/main-newmark,2,1000,1,0.005,3.0,,0.25,0.5,0,11437.227265
+newmark,../build/main-newmark,4,1000,1,0.005,3.0,,0.25,0.5,0,15179.448765
+newmark,../build/main-newmark,8,1000,1,0.005,3.0,,0.25,0.5,0,8182.063261
+newmark,../build/main-newmark,16,1000,1,0.005,3.0,,0.25,0.5,0,5635.565338
+
+
+

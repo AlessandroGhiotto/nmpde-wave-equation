@@ -15,6 +15,10 @@ DEST_DIR="/home/u11177200/nmpde-wave-equation/scripts"
 
 exec > "${SOURCE_DIR}/scaling_p16.log" 2>&1
 
+# Avoid accidental OpenMP oversubscription
+export OMP_NUM_THREADS=1
+export PYTHONUNBUFFERED=1
+
 echo "Job started on $(date)"
 cat "$PBS_NODEFILE"
 
@@ -28,8 +32,10 @@ cp -r "$PROJECT_ROOT/build"      "$SCRATCH_ROOT/"
 
 cd "$WORK_DIR" || exit 1
 
-python3 -u scalability_single.py --nprocs 16
+python3 -u scalability_single.py --nprocs 16 --repeats 1 --use-pbs-nodefile
 
-cp scalability-results-16.csv "$DEST_DIR/"
+mkdir -p "$DEST_DIR"
+cp -f scalability-results-16.csv "$DEST_DIR/"
+cp -rf run-logs "$DEST_DIR/run-logs-16-${PBS_JOBID}" || true
 
 echo "Job finished on $(date)"
