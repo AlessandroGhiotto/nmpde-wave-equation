@@ -1,12 +1,11 @@
 scheme,binary,nprocs,repeat,Nel,R,Dt,T,Theta,Beta,Gamma,returncode,seconds,cmd,stdout_log,stderr_log
-theta,/scratch_local/nmpde-wave-equation_5604.login01/build/main-theta,1,1,320,1,0.005,5.0,0.5,,,0,2462.947289,mpirun -np 1 /scratch_local/nmpde-wave-equation_5604.login01/build/ma>
-theta,/scratch_local/nmpde-wave-equation_5605.login01/build/main-theta,2,1,320,1,0.005,5.0,0.5,,,0,2409.145315,mpirun -np 2 --hostfile /var/spool/pbs/aux/5605.login01 /scratch_loca>
-theta,/scratch_local/nmpde-wave-equation_5606.login01/build/main-theta,4,1,320,1,0.005,5.0,0.5,,,0,705.875547,mpirun -np 4 --hostfile /var/spool/pbs/aux/5606.login01 /scratch_local>
-theta,/scratch_local/nmpde-wave-equation_5607.login01/build/main-theta,8,1,320,1,0.005,5.0,0.5,,,0,455.728672,mpirun -np 8 --hostfile /var/spool/pbs/aux/5607.login01 /scratch_local>
-theta,/scratch_local/nmpde-wave-equation_5608.login01/build/main-theta,16,1,320,1,0.005,5.0,0.5,,,0,318.805322,mpirun -np 16 --hostfile /var/spool/pbs/aux/5608.login01 /scratch_loc>
-newmark,/scratch_local/nmpde-wave-equation_5604.login01/build/main-newmark,1,1,320,1,0.005,5.0,,0.25,0.5,0,1728.875436,mpirun -np 1 /scratch_local/nmpde-wave-equation_5604.login01/>
-newmark,/scratch_local/nmpde-wave-equation_5605.login01/build/main-newmark,2,1,320,1,0.005,5.0,,0.25,0.5,0,1566.307592,mpirun -np 2 --hostfile /var/spool/pbs/aux/5605.login01 /scra>
-newmark,/scratch_local/nmpde-wave-equation_5606.login01/build/main-newmark,4,1,320,1,0.005,5.0,,0.25,0.5,0,544.656010,mpirun -np 4 --hostfile /var/spool/pbs/aux/5606.login01 /scrat>
-newmark,/scratch_local/nmpde-wave-equation_5607.login01/build/main-newmark,8,1,320,1,0.005,5.0,,0.25,0.5,0,337.516854,mpirun -np 8 --hostfile /var/spool/pbs/aux/5607.login01 /scrat>
-newmark,/scratch_local/nmpde-wave-equation_5608.login01/build/main-newmark,16,1,320,1,0.005,5.0,,0.25,0.5,0,209.623137,mpirun -np 16 --hostfile /var/spool/pbs/aux/5608.login01 /scr>
-
+theta,/scratch_local/nmpde-wave-equation_5609.login01/build/main-theta,1,1,320,1,0.005,5.0,0.5,,,0,1256.847512,mpirun -np 1 /scratch_local/nmpde-wave-e>
+theta,/scratch_local/nmpde-wave-equation_5610.login01/build/main-theta,2,1,320,1,0.005,5.0,0.5,,,0,934.702800,mpirun -np 2 --hostfile /var/spool/pbs/au>
+theta,/scratch_local/nmpde-wave-equation_5612.login01/build/main-theta,8,1,320,1,0.005,5.0,0.5,,,0,258.819162,mpirun -np 8 --hostfile /var/spool/pbs/au>
+theta,/scratch_local/nmpde-wave-equation_5611.login01/build/main-theta,4,1,320,1,0.005,5.0,0.5,,,0,460.225233,mpirun -np 4 --hostfile /var/spool/pbs/au>
+theta,/scratch_local/nmpde-wave-equation_5613.login01/build/main-theta,16,1,320,1,0.005,5.0,0.5,,,0,147.568676,mpirun -np 16 --hostfile /var/spool/pbs/>
+newmark,/scratch_local/nmpde-wave-equation_5609.login01/build/main-newmark,1,1,320,1,0.005,5.0,,0.25,0.5,0,876.903090,mpirun -np 1 /scratch_local/nmpde>
+newmark,/scratch_local/nmpde-wave-equation_5610.login01/build/main-newmark,2,1,320,1,0.005,5.0,,0.25,0.5,0,678.182638,mpirun -np 2 --hostfile /var/spoo>
+newmark,/scratch_local/nmpde-wave-equation_5611.login01/build/main-newmark,4,1,320,1,0.005,5.0,,0.25,0.5,0,314.326390,mpirun -np 4 --hostfile /var/spoo>
+newmark,/scratch_local/nmpde-wave-equation_5612.login01/build/main-newmark,8,1,320,1,0.005,5.0,,0.25,0.5,0,182.770925,mpirun -np 8 --hostfile /var/spoo>
+newmark,/scratch_local/nmpde-wave-equation_5613.login01/build/main-newmark,16,1,320,1,0.005,5.0,,0.25,0.5,0,106.298448,mpirun -np 16 --hostfile /var/sp>
