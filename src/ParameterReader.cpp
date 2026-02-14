@@ -25,42 +25,52 @@ void ParameterReader::declare_scalar_parameters()
                       "../mesh/mesh-square-40.msh",
                       Patterns::FileName(),
                       "Path to the mesh file");
+
     prm.declare_entry("R",
                       "1",
                       Patterns::Integer(1),
                       "Degree of the polynomial");
+
     prm.declare_entry("T",
                       "1.0",
                       Patterns::Double(0.0),
                       "Length of the time interval");
+
     prm.declare_entry("Theta",
                       "0.5",
                       Patterns::Double(0.0, 1.0),
                       "Theta parameter for the theta-method for time discretization");
+
     prm.declare_entry("Beta",
                       "0.25",
                       Patterns::Double(0.0, 1.0),
                       "Beta parameter for the newmark method for time discretization");
+
     prm.declare_entry("Gamma",
                       "0.5",
                       Patterns::Double(0.0, 1.0),
                       "Gamma parameter for the newmark method for time discretization");
+
     prm.declare_entry("Dt",
                       "0.01",
                       Patterns::Double(0.0),
                       "Length of the time step");
+
     prm.declare_entry("Save Solution",
                       "true",
                       Patterns::Bool(),
                       "If true, write VTU/PVTU output (u, v and u_exact when available). If false, skip solution output.");
+
     prm.declare_entry("Enable Logging",
                       "true",
                       Patterns::Bool(),
                       "If true, write energy/error CSV logs. If false, disable time-series logging (equivalent to Log Every = 0).");
+
     prm.declare_entry("Log Every",
                       "10",
                       Patterns::Integer(0),
                       "Log energy/error every n timesteps. Use 0 to disable logging.");
+
     prm.declare_entry("Print Every",
                       "10",
                       Patterns::Integer(1),

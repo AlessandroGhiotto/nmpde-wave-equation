@@ -72,7 +72,10 @@ def write_params(base, overrides, out_path):
             "R": R,
             "Dt": DT,
             "T": T_VALUE,
-            "Print Every": "200",
+            "Print Every": "10000000",
+            "Log Every": "0",
+            "Enable Logging": "false",
+            "Save Solution": "false",
         }
     )
     params.update(overrides)
@@ -90,7 +93,6 @@ def _build_mpi_cmd(binary: Path, param_file: Path) -> list[str]:
     if args.use_pbs_nodefile:
         pbs_nodefile = os.environ.get("PBS_NODEFILE")
         if pbs_nodefile:
-            # NOTE: this is OpenMPI-style; if your site uses MPICH/IntelMPI, prefer passing via --mpi-arg.
             cmd += ["--hostfile", pbs_nodefile]
 
     # User-provided MPI args (portable way to encode site-specific binding/mapping).
