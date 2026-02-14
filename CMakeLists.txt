@@ -43,6 +43,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wfloat-conversion -Wmissing-braces -Wno
 
 ###########################################
 
+# Headers live in include/
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
 # Add the base class library
 add_library(WaveEquationBase STATIC src/WaveEquationBase.cpp)
 deal_ii_setup_target(WaveEquationBase)

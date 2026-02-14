@@ -16,6 +16,9 @@
 # PARAVIEWS STATES AND OUTPUTS
 **/paraview/*
 
+# PAPERS
+**/references/*
+
 # personal notes
 use-cluster.md
 # ------------------------------

@@ -20,8 +20,8 @@ THETA_VALUE = "0.5"  # CN
 
 BINARY = Path("../build/main-newmark")
 GAMMA_VALUE = "0.5"
-# BETA_VALUE = "0.25"  # Average constant acceleration
-BETA_VALUE = "0.0"  # Explicit central difference scheme
+BETA_VALUE = "0.25"  # Average constant acceleration
+# BETA_VALUE = "0.0"  # Explicit central difference scheme
 
 
 def load_base(path: Path) -> dict:

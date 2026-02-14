@@ -149,17 +149,18 @@ void WaveTheta::assemble_rhs_u()
             const double JxW = fe_values.JxW(q);
             const Point<dim>& x_q = fe_values.quadrature_point(q);
 
-            // Current forcing term and future current term
-            f.set_time(time);
+            // Forcing term: f^n at t^n, f^{n+1} at t^{n+1}
+            // Note: time has already been incremented to t^{n+1} in run()
+            f.set_time(time - delta_t);
             const double f_n = f.value(x_q);
 
-            f.set_time(time + delta_t);
+            f.set_time(time);
             const double f_np1 = f.value(x_q);
 
             const double f_avg = theta * f_np1 + (1.0 - theta) * f_n;
 
             for (unsigned int i = 0; i < dofs_per_cell; ++i)
-                cell_rhs(i) += delta_t * delta_t * f_avg * fe_values.shape_value(i, q) * JxW;
+                cell_rhs(i) += theta * delta_t * delta_t * f_avg * fe_values.shape_value(i, q) * JxW;
         }
 
         cell->get_dof_indices(dof_indices);
@@ -211,10 +212,12 @@ void WaveTheta::assemble_rhs_v()
             const double JxW = fe_values.JxW(q);
             const Point<dim>& x_q = fe_values.quadrature_point(q);
 
-            f.set_time(time);
+            // Forcing term: f^n at t^n, f^{n+1} at t^{n+1}
+            // Note: time has already been incremented to t^{n+1} in run()
+            f.set_time(time - delta_t);
             const double f_n = f.value(x_q);
 
-            f.set_time(time + delta_t);
+            f.set_time(time);
             const double f_np1 = f.value(x_q);
 
             const double f_avg = theta * f_np1 + (1.0 - theta) * f_n;
@@ -240,9 +243,10 @@ void WaveTheta::solve_u()
     system_matrix.reinit(matrix_u);
     system_matrix.copy_from(matrix_u);
 
-    // Dirichlet boundary conditions
+    // Dirichlet boundary conditions at t^{n+1}
+    // Note: time has already been incremented to t^{n+1} in run()
     {
-        g.set_time(time + delta_t);
+        g.set_time(time);
 
         std::map<types::global_dof_index, double> boundary_values_u;
         std::map<types::boundary_id, const Function<dim>*> boundary_functions_u;
@@ -276,9 +280,10 @@ void WaveTheta::solve_v()
     system_matrix.reinit(matrix_v);
     system_matrix.copy_from(matrix_v);
 
-    // Boundary condition
+    // Boundary condition at t^{n+1}
+    // Note: time has already been incremented to t^{n+1} in run()
     {
-        dgdt.set_time(time + delta_t);
+        dgdt.set_time(time);
 
         std::map<types::global_dof_index, double> boundary_values_v;
         std::map<types::boundary_id, const Function<dim>*> boundary_functions_v;
