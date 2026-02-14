@@ -1,6 +1,4 @@
 #include "WaveNewmark.hpp"
-#include <Teuchos_StackedTimer.hpp>
-#include <Teuchos_TimeMonitor.hpp>
 
 void WaveNewmark::setup()
 {
@@ -111,19 +109,25 @@ void WaveNewmark::assemble_rhs()
 
     system_rhs = 0.0;
 
-    // z = u^n + dt v^n + dt^2 (0.5 - beta) a^n
+    // --- Local vector arithmetic (no MPI) ---
     TrilinosWrappers::MPI::Vector z(old_solution_u);
-    z.add(delta_t, old_solution_v);
-    z.add(delta_t * delta_t * (0.5 - beta), old_solution_a);
+    {
+        Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("rhs:vector_ops"));
+        z.add(delta_t, old_solution_v);
+        z.add(delta_t * delta_t * (0.5 - beta), old_solution_a);
+    }
 
-    // w = A * z
+    // --- SpMV: involves ghost exchange (MPI communication) ---
     TrilinosWrappers::MPI::Vector w(system_rhs);
-    stiffness_matrix.vmult(w, z);
+    {
+        Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("rhs:vmult"));
+        stiffness_matrix.vmult(w, z);
+    }
 
-    // RHS = -w
+    // RHS = -w  (local)
     system_rhs.add(-1.0, w);
 
-    // Add forcing term f^{n+1}
+    // --- Local cell loop for forcing term ---
     const unsigned int dofs_per_cell = fe->dofs_per_cell;
     const unsigned int n_q = quadrature->size();
 
@@ -136,98 +140,104 @@ void WaveNewmark::assemble_rhs()
     TrilinosWrappers::MPI::Vector rhs_f(system_rhs);
     rhs_f = 0.0;
 
-    // Evaluate forcing term at t^{n+1}
     f.set_time(time);
 
-    for (const auto& cell : dof_handler.active_cell_iterators())
     {
-        if (!cell->is_locally_owned())
-            continue;
-
-        fe_values.reinit(cell);
-        cell_rhs = 0.0;
-
-        for (unsigned int q = 0; q < n_q; ++q)
+        Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("rhs:cell_loop"));
+        for (const auto& cell : dof_handler.active_cell_iterators())
         {
-            const double JxW = fe_values.JxW(q);
-            const Point<dim>& x_q = fe_values.quadrature_point(q);
-            const double f_np1 = f.value(x_q);
+            if (!cell->is_locally_owned())
+                continue;
 
-            for (unsigned int i = 0; i < dofs_per_cell; ++i)
-                cell_rhs(i) += f_np1 * fe_values.shape_value(i, q) * JxW;
+            fe_values.reinit(cell);
+            cell_rhs = 0.0;
+
+            for (unsigned int q = 0; q < n_q; ++q)
+            {
+                const double JxW = fe_values.JxW(q);
+                const Point<dim>& x_q = fe_values.quadrature_point(q);
+                const double f_np1 = f.value(x_q);
+
+                for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                    cell_rhs(i) += f_np1 * fe_values.shape_value(i, q) * JxW;
+            }
+
+            cell->get_dof_indices(dof_indices);
+            rhs_f.add(dof_indices, cell_rhs);
         }
-
-        cell->get_dof_indices(dof_indices);
-        rhs_f.add(dof_indices, cell_rhs);
     }
 
     system_rhs.add(1.0, rhs_f);
-    system_rhs.compress(VectorOperation::add);
+
+    // --- compress: MPI communication (Allreduce / exchange) ---
+    {
+        Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("rhs:compress"));
+        system_rhs.compress(VectorOperation::add);
+    }
 }
 
 void WaveNewmark::solve_a()
 {
-    // Create a temporary system matrix to apply BCs without destroying the global matrix_a
+    // --- Matrix copy + BC application (local, no MPI) ---
     TrilinosWrappers::SparseMatrix system_matrix;
-    system_matrix.reinit(matrix_a);
-    system_matrix.copy_from(matrix_a);
-
-    // Calculate boundary values for acceleration a^{n+1} derived from u^{n+1} = g(t^{n+1})
-    // u^{n+1} = u_pred + beta * dt^2 * a^{n+1}
-    // => a^{n+1} = (g(t^{n+1}) - u_pred) / (beta * dt^2)
-
-    std::map<types::global_dof_index, double> boundary_values_a;
-    std::map<types::global_dof_index, double> boundary_values_u;
-
-    g.set_time(time);
-
-    for (const auto id : mesh.get_boundary_ids())
-        VectorTools::interpolate_boundary_values(dof_handler, id, g, boundary_values_u);
-
-    const double beta_dt2 = beta * delta_t * delta_t;
-
-    // Assuming implicit Newmark (beta > 0)
-    if (beta > 1e-12)
     {
-        for (const auto& bv : boundary_values_u)
+        Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("solve:BC_setup"));
+
+        system_matrix.reinit(matrix_a);
+        system_matrix.copy_from(matrix_a);
+
+        std::map<types::global_dof_index, double> boundary_values_a;
+        std::map<types::global_dof_index, double> boundary_values_u;
+
+        g.set_time(time);
+
+        for (const auto id : mesh.get_boundary_ids())
+            VectorTools::interpolate_boundary_values(dof_handler, id, g, boundary_values_u);
+
+        const double beta_dt2 = beta * delta_t * delta_t;
+
+        if (beta > 1e-12)
         {
-            const types::global_dof_index dof = bv.first;
-            const double g_val = bv.second;
+            for (const auto& bv : boundary_values_u)
+            {
+                const types::global_dof_index dof = bv.first;
+                const double g_val = bv.second;
 
-            // u_pred = u^n + dt * v^n + dt^2 * (0.5 - beta) * a^n
-            const double u_pred = old_solution_u(dof) +
-                                  delta_t * old_solution_v(dof) +
-                                  delta_t * delta_t * (0.5 - beta) * old_solution_a(dof);
+                const double u_pred = old_solution_u(dof) +
+                                      delta_t * old_solution_v(dof) +
+                                      delta_t * delta_t * (0.5 - beta) * old_solution_a(dof);
 
-            boundary_values_a[dof] = (g_val - u_pred) / beta_dt2;
+                boundary_values_a[dof] = (g_val - u_pred) / beta_dt2;
+            }
         }
+
+        MatrixTools::apply_boundary_values(boundary_values_a, system_matrix,
+                                           solution_a, system_rhs, true);
     }
 
-    // Apply boundary values to the system matrix and RHS
-    // eliminate_columns = true preserves symmetry for CG solver
-    MatrixTools::apply_boundary_values(boundary_values_a, system_matrix,
-                                       solution_a, system_rhs, true);
-
+    // --- Preconditioner initialization (local) ---
     TrilinosWrappers::PreconditionSSOR preconditioner;
-    preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+    {
+        Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("solve:preconditioner_init"));
+        preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+    }
 
+    // --- CG solve: contains MPI communication (dot products = Allreduce, SpMV = ghost exchange) ---
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    // {
-    //     Teuchos::TimeMonitor t_solvercg(*Teuchos::TimeMonitor::getNewTimer("solve:CG"));
-    //     solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
-    // }
-    solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
+    {
+        Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("solve:CG"));
+        solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
+    }
 
     current_iterations = solver_control.last_step();
 }
 
 void WaveNewmark::update_u_v()
 {
-    // Newmark updates:
-    // u^{n+1} = u^n + dt v^n + dt^2 [(0.5 - beta) a^n + beta a^{n+1}]
-    // v^{n+1} = v^n + dt [(1 - gamma) a^n + gamma a^{n+1}]
+    // Newmark updates (purely local vector arithmetic, no MPI)
+    Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("update:vector_ops"));
 
     solution_u = old_solution_u;
     solution_u.add(delta_t, old_solution_v);
@@ -259,6 +269,7 @@ void WaveNewmark::run()
 
     // Compute consistent initial acceleration a^0 by solving:
     //   M a^0 = f(0) - K u^0
+    // Setting a^0 = 0 would introduce an O(1) error that degrades convergence.
     {
         pcout << "Computing consistent initial acceleration a^0..." << std::endl;
 
@@ -330,32 +341,33 @@ void WaveNewmark::run()
 
     // Start timer
     auto start_time = std::chrono::high_resolution_clock::now();
-    // auto stacked = Teuchos::rcp(new Teuchos::StackedTimer("WaveNewmark"));
-    // Teuchos::TimeMonitor::setStackedTimer(stacked);
+    auto stacked = Teuchos::rcp(new Teuchos::StackedTimer("WaveNewmark"));
+    Teuchos::TimeMonitor::setStackedTimer(stacked);
 
     while (time < T)
     {
         time += delta_t;
         ++timestep_number;
 
-        // {
-        //     Teuchos::TimeMonitor t_rhs(*Teuchos::TimeMonitor::getNewTimer("rhs"));
-        //     assemble_rhs();
-        // }
-        // {
-        //     Teuchos::TimeMonitor t_solve(*Teuchos::TimeMonitor::getNewTimer("solve"));
-        //     solve_a(); // this also handle the BCs
-        // }
-        // {
-        //     Teuchos::TimeMonitor t_update(*Teuchos::TimeMonitor::getNewTimer("update"));
-        //     update_u_v();
-        // }
-        assemble_rhs();
-        solve_a(); // this also handle the BCs
-        update_u_v();
-
-        const double norm_u = solution_u.l2_norm();
-        const double norm_v = solution_v.l2_norm();
+        {
+            Teuchos::TimeMonitor t_rhs(*Teuchos::TimeMonitor::getNewTimer("rhs"));
+            assemble_rhs();
+        }
+        {
+            Teuchos::TimeMonitor t_solve(*Teuchos::TimeMonitor::getNewTimer("solve"));
+            solve_a(); // this also handle the BCs
+        }
+        {
+            Teuchos::TimeMonitor t_update(*Teuchos::TimeMonitor::getNewTimer("update"));
+            update_u_v();
+        }
+        // --- Norms: MPI Allreduce ---
+        double norm_u, norm_v;
+        {
+            Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("norms"));
+            norm_u = solution_u.l2_norm();
+            norm_v = solution_v.l2_norm();
+        }
         if (check_divergence(norm_u, norm_v, divergence_threshold))
         {
             pcout << "Divergence detected at step " << timestep_number
@@ -363,12 +375,17 @@ void WaveNewmark::run()
             break;
         }
 
-        old_solution_u = solution_u;
-        old_solution_v = solution_v;
-        old_solution_a = solution_a;
+        // --- Vector copies (local, no MPI) ---
+        {
+            Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("copy_old"));
+            old_solution_u = solution_u;
+            old_solution_v = solution_v;
+            old_solution_a = solution_a;
+        }
 
         if (log_every > 0 && (timestep_number % log_every == 0))
         {
+            Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("logging"));
             compute_and_log_energy();
             compute_and_log_error();
             log_iterations(current_iterations, 0);
@@ -379,7 +396,10 @@ void WaveNewmark::run()
             print_step_info();
         }
 
-        output();
+        {
+            Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("output"));
+            output();
+        }
     }
 
     // Stop timer and compute elapsed time
@@ -407,6 +427,6 @@ void WaveNewmark::run()
             iterations_log_file.close();
     }
 
-    // stacked->report(std::cout, Teuchos::DefaultComm<int>::getComm());
-    // Teuchos::TimeMonitor::summarize();
+    stacked->report(std::cout, Teuchos::DefaultComm<int>::getComm());
+    Teuchos::TimeMonitor::summarize();
 }
