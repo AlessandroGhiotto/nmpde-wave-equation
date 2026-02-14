@@ -1,6 +1,4 @@
 #include "WaveNewmark.hpp"
-#include <Teuchos_StackedTimer.hpp>
-#include <Teuchos_TimeMonitor.hpp>
 
 void WaveNewmark::setup()
 {
