@@ -206,16 +206,19 @@ void WaveNewmark::solve_a()
     MatrixTools::apply_boundary_values(boundary_values_a, system_matrix,
                                        solution_a, system_rhs, true);
 
-    TrilinosWrappers::PreconditionSSOR preconditioner;
-    preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+    TrilinosWrappers::PreconditionAMG preconditioner;
+    {
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic              = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps       = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner.initialize(system_matrix, amg_data);
+    }
 
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    // {
-    //     Teuchos::TimeMonitor t_solvercg(*Teuchos::TimeMonitor::getNewTimer("solve:CG"));
-    //     solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
-    // }
     solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
 
     current_iterations = solver_control.last_step();
@@ -303,9 +306,15 @@ void WaveNewmark::run()
         rhs_a.add(1.0, f_vec);
 
         // Solve M a^0 = f(0) - K u^0
-        TrilinosWrappers::PreconditionSSOR preconditioner;
-        preconditioner.initialize(
-            mass_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+        TrilinosWrappers::PreconditionAMG preconditioner;
+        {
+            TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+            amg_data.elliptic              = true;
+            amg_data.higher_order_elements = false;
+            amg_data.smoother_sweeps       = 2;
+            amg_data.aggregation_threshold = 0.02;
+            preconditioner.initialize(mass_matrix, amg_data);
+        }
 
         ReductionControl solver_control(10000, 1e-12, 1e-6);
         SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
@@ -325,6 +334,7 @@ void WaveNewmark::run()
     timestep_number = 0;
     time = 0.0;
     const double divergence_threshold = 1e130;
+    unsigned int total_iterations = 0;
 
     // Start timer
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -351,6 +361,7 @@ void WaveNewmark::run()
         assemble_rhs();
         solve_a(); // this also handle the BCs
         update_u_v();
+        total_iterations += current_iterations;
 
         const double norm_u = solution_u.l2_norm();
         const double norm_v = solution_v.l2_norm();
@@ -388,6 +399,10 @@ void WaveNewmark::run()
           << " steps, final time t = " << time << std::endl;
     pcout << "Elapsed time: " << std::fixed << std::setprecision(3)
           << simulation_time << " seconds" << std::endl;
+    pcout << "Total CG iterations: " << total_iterations
+          << ", avg per step: " << std::fixed << std::setprecision(1)
+          << (timestep_number > 0 ? static_cast<double>(total_iterations) / timestep_number : 0.0)
+          << std::endl;
 
     // Compute final errors with Newmark parameters to be logged in csv
     compute_final_errors("", std::to_string(beta), std::to_string(gamma));

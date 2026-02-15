@@ -262,8 +262,15 @@ void WaveTheta::solve_u()
             boundary_values_u, system_matrix, solution_u, system_rhs, true);
     }
 
-    TrilinosWrappers::PreconditionSSOR preconditioner;
-    preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+    TrilinosWrappers::PreconditionAMG preconditioner;
+    {
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic              = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps       = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner.initialize(system_matrix, amg_data);
+    }
 
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
@@ -299,8 +306,15 @@ void WaveTheta::solve_v()
             boundary_values_v, system_matrix, solution_v, system_rhs, true);
     }
 
-    TrilinosWrappers::PreconditionSSOR preconditioner;
-    preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+    TrilinosWrappers::PreconditionAMG preconditioner;
+    {
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic              = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps       = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner.initialize(system_matrix, amg_data);
+    }
 
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
@@ -335,6 +349,8 @@ void WaveTheta::run()
     timestep_number = 0;
     time = 0.0;
     const double divergence_threshold = 1e130;
+    unsigned int total_iterations_u = 0;
+    unsigned int total_iterations_v = 0;
 
     // Start timer
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -346,9 +362,11 @@ void WaveTheta::run()
 
         assemble_rhs_u();
         solve_u();
+        total_iterations_u += current_iterations_u;
 
         assemble_rhs_v();
         solve_v();
+        total_iterations_v += current_iterations_v;
 
         const double norm_u = solution_u.l2_norm();
         const double norm_v = solution_v.l2_norm();
@@ -385,6 +403,14 @@ void WaveTheta::run()
           << " steps, final time t = " << time << std::endl;
     pcout << "Elapsed time: " << std::fixed << std::setprecision(3)
           << simulation_time << " seconds" << std::endl;
+    pcout << "Total CG iterations (u): " << total_iterations_u
+          << ", avg per step: " << std::fixed << std::setprecision(1)
+          << (timestep_number > 0 ? static_cast<double>(total_iterations_u) / timestep_number : 0.0)
+          << std::endl;
+    pcout << "Total CG iterations (v): " << total_iterations_v
+          << ", avg per step: " << std::fixed << std::setprecision(1)
+          << (timestep_number > 0 ? static_cast<double>(total_iterations_v) / timestep_number : 0.0)
+          << std::endl;
 
     // Compute final errors with logging of theta
     compute_final_errors(std::to_string(theta), "", "");

@@ -218,10 +218,15 @@ void WaveNewmark::solve_a()
     }
 
     // --- Preconditioner initialization (local) ---
-    TrilinosWrappers::PreconditionSSOR preconditioner;
+    TrilinosWrappers::PreconditionAMG preconditioner;
     {
         Teuchos::TimeMonitor t(*Teuchos::TimeMonitor::getNewTimer("solve:preconditioner_init"));
-        preconditioner.initialize(system_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic              = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps       = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner.initialize(system_matrix, amg_data);
     }
 
     // --- CG solve: contains MPI communication (dot products = Allreduce, SpMV = ghost exchange) ---
@@ -318,9 +323,15 @@ void WaveNewmark::run()
         rhs_a.add(1.0, f_vec);
 
         // Solve M a^0 = f(0) - K u^0
-        TrilinosWrappers::PreconditionSSOR preconditioner;
-        preconditioner.initialize(
-            mass_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+        TrilinosWrappers::PreconditionAMG preconditioner;
+        {
+            TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+            amg_data.elliptic              = true;
+            amg_data.higher_order_elements = false;
+            amg_data.smoother_sweeps       = 2;
+            amg_data.aggregation_threshold = 0.02;
+            preconditioner.initialize(mass_matrix, amg_data);
+        }
 
         ReductionControl solver_control(10000, 1e-12, 1e-6);
         SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);

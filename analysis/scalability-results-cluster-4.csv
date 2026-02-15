@@ -1,24 +1,11 @@
-  GNU nano 7.2                                          scalability-results-all.csv                                                   
 scheme,binary,nprocs,repeat,Nel,R,Dt,T,Theta,Beta,Gamma,returncode,seconds,cmd,stdout_log,stderr_log
-theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,1,1,320,1,0.005,3.0,0.5,,,0,165.500467,mpirun -np 1 --hostfile>
-newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,1,1,320,1,0.005,3.0,,0.25,0.5,0,88.764580,mpirun -np 1 --h>
-theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,2,1,320,1,0.005,3.0,0.5,,,0,324.119410,mpirun -np 2 --hostfile>
-newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,2,1,320,1,0.005,3.0,,0.25,0.5,0,143.759419,mpirun -np 2 -->
-theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,4,1,320,1,0.005,3.0,0.5,,,0,179.091733,mpirun -np 4 --hostfile>
-newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,4,1,320,1,0.005,3.0,,0.25,0.5,0,84.357037,mpirun -np 4 --h>
-theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,8,1,320,1,0.005,3.0,0.5,,,0,98.117921,mpirun -np 8 --hostfile >
-newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,8,1,320,1,0.005,3.0,,0.25,0.5,0,44.983994,mpirun -np 8 --h>
-theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,16,1,320,1,0.005,3.0,0.5,,,0,57.886667,mpirun -np 16 --hostfil>
-newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,16,1,320,1,0.005,3.0,,0.25,0.5,0,27.842570,mpirun -np 16 ->
-
-
-
-
-
-
-
-
-
-
-^G Help         ^O Write Out    ^W Where Is     ^K Cut          ^T Execute      ^C Location     M-U Undo        M-A Set Mark
-^X Exit         ^R Read File    ^\ Replace      ^U Paste        ^J Justify      ^/ Go To Line   M-E Redo        M-6 Copy
+theta,/scratch_local/nmpde-wave-equation_9384.login01/build/main-theta,1,1,320,1,0.005,3.0,0.5,,,0,167.544061,mpirun -np 1 --hostfile /tmp/hostfile_np1_78154 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.login01/>
+newmark,/scratch_local/nmpde-wave-equation_9384.login01/build/main-newmark,1,1,320,1,0.005,3.0,,0.25,0.5,0,89.094251,mpirun -np 1 --hostfile /tmp/hostfile_np1_78154 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.l>
+theta,/scratch_local/nmpde-wave-equation_9384.login01/build/main-theta,2,1,320,1,0.005,3.0,0.5,,,0,322.570246,mpirun -np 2 --hostfile /tmp/hostfile_np2_78199 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.login01/>
+newmark,/scratch_local/nmpde-wave-equation_9384.login01/build/main-newmark,2,1,320,1,0.005,3.0,,0.25,0.5,0,144.009685,mpirun -np 2 --hostfile /tmp/hostfile_np2_78199 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.>
+theta,/scratch_local/nmpde-wave-equation_9384.login01/build/main-theta,4,1,320,1,0.005,3.0,0.5,,,0,173.122091,mpirun -np 4 --hostfile /tmp/hostfile_np4_78249 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.login01/>
+newmark,/scratch_local/nmpde-wave-equation_9384.login01/build/main-newmark,4,1,320,1,0.005,3.0,,0.25,0.5,0,81.569630,mpirun -np 4 --hostfile /tmp/hostfile_np4_78249 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.l>
+theta,/scratch_local/nmpde-wave-equation_9384.login01/build/main-theta,8,1,320,1,0.005,3.0,0.5,,,0,96.894933,mpirun -np 8 --hostfile /tmp/hostfile_np8_78333 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.login01/b>
+newmark,/scratch_local/nmpde-wave-equation_9384.login01/build/main-newmark,8,1,320,1,0.005,3.0,,0.25,0.5,0,44.164930,mpirun -np 8 --hostfile /tmp/hostfile_np8_78333 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.l>
+theta,/scratch_local/nmpde-wave-equation_9384.login01/build/main-theta,16,1,320,1,0.005,3.0,0.5,,,0,50.275092,mpirun -np 16 --hostfile /tmp/hostfile_np16_78428 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_9384.login0>
+newmark,/scratch_local/nmpde-wave-equation_9384.login01/build/main-newmark,16,1,320,1,0.005,3.0,,0.25,0.5,0,24.567142,mpirun -np 16 --hostfile /tmp/hostfile_np16_78428 --bind-to core --map-by socket /scratch_local/nmpde-wave-equation_938>
