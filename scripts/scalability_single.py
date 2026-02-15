@@ -44,6 +44,11 @@ parser.add_argument(
     action="store_true",
     help="If $PBS_NODEFILE is set, pass it as a hostfile to the launcher (OpenMPI-style --hostfile).",
 )
+parser.add_argument(
+    "--job-id",
+    default=os.environ.get("PBS_JOBID", ""),
+    help="Job identifier appended to output CSV filenames (default: $PBS_JOBID or empty).",
+)
 args = parser.parse_args()
 
 NPROCS = args.nprocs
@@ -64,7 +69,9 @@ T_VALUE = "0.5"
 BINARY_THETA = (PROJECT_ROOT / "build" / "main-theta").resolve()
 BINARY_NEWMARK = (PROJECT_ROOT / "build" / "main-newmark").resolve()
 
-RESULTS_CSV = Path(f"scalability-results-{NPROCS}.csv")
+# Build output filename: scalability-results-<nprocs>[-<jobid>].csv
+_job_suffix = f"-{args.job_id}" if args.job_id else ""
+RESULTS_CSV = Path(f"scalability-results-{NPROCS}{_job_suffix}.csv")
 
 
 # ----------------------------

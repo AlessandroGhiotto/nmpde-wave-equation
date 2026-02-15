@@ -3,7 +3,9 @@
 #PBS -q cpu
 ## Request 16 CPUs (max allowed). We'll also try nprocs=32 opportunistically
 ## if the node has idle cores — mpirun will succeed if enough are free.
-#PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu04
+## Submit for different nodes:  qsub -v TARGET_HOST=cpu04 scaling_all.pbs
+##                              qsub -v TARGET_HOST=cpu05 scaling_all.pbs
+#PBS -l select=1:ncpus=16:mpiprocs=16
 #PBS -l walltime=48:00:00
 #PBS -j oe
 #PBS -o scaling_final.out
@@ -21,9 +23,15 @@ exec > "${SOURCE_DIR}/scaling_final.log" 2>&1
 export OMP_NUM_THREADS=1
 export PYTHONUNBUFFERED=1
 
+# Unique tag: hostname + short PBS job id (e.g. cpu04_12345)
+# Allows launching on two nodes simultaneously without filename collisions.
+JOB_TAG="$(hostname)_${PBS_JOBID%%.*}"
+export JOB_TAG
+
 echo "============================================="
 echo "Job started on $(date)"
 echo "Node: $(hostname)"
+echo "JOB_TAG: $JOB_TAG"
 echo "PBS_NODEFILE contents:"
 cat "$PBS_NODEFILE"
 echo "============================================="
@@ -56,7 +64,8 @@ for NP in 1 2 4 8 16; do
     python3 -u scalability_single.py \
         --nprocs "$NP" \
         --repeats "$REPEATS" \
-        --use-pbs-nodefile
+        --use-pbs-nodefile \
+        --job-id "$JOB_TAG"
     echo "Finished nprocs=$NP at $(date)"
 done
 
@@ -74,7 +83,8 @@ if [ $? -eq 0 ]; then
         --nprocs "$NP" \
         --repeats "$REPEATS" \
         --use-pbs-nodefile \
-        --mpi-arg=--oversubscribe
+        --mpi-arg=--oversubscribe \
+        --job-id "$JOB_TAG"
     echo "Finished nprocs=$NP at $(date)"
 else
     echo "32-core run failed (node likely busy). Skipping."
@@ -83,10 +93,11 @@ fi
 # Merge all per-nprocs CSVs into one
 echo ""
 echo "Merging results..."
-MERGED="scalability-results-all.csv"
-head -1 scalability-results-1.csv > "$MERGED"
+MERGED="scalability-results-all-${JOB_TAG}.csv"
+FIRST_CSV="scalability-results-1-${JOB_TAG}.csv"
+head -1 "$FIRST_CSV" > "$MERGED"
 for NP in 1 2 4 8 16 32; do
-    CSV="scalability-results-${NP}.csv"
+    CSV="scalability-results-${NP}-${JOB_TAG}.csv"
     if [ -f "$CSV" ]; then
         tail -n +2 "$CSV" >> "$MERGED"
     fi
@@ -94,7 +105,7 @@ done
 
 mkdir -p "$DEST_DIR"
 cp -f scalability-results-*.csv "$DEST_DIR/"
-cp -rf run-logs "$DEST_DIR/run-logs-all-${PBS_JOBID}" || true
+cp -rf run-logs "$DEST_DIR/run-logs-${JOB_TAG}" || true
 
 echo ""
 echo "============================================="
