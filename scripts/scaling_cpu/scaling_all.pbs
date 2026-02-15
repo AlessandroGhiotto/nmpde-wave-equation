@@ -3,7 +3,7 @@
 #PBS -q cpu
 ## Request max allowed CPUs on a single node.
 ## Not exclusive, but pick a quiet node. Change host= as needed.
-#PBS -l select=1:ncpus=16:mpiprocs=16
+#PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu04
 #PBS -l walltime=24:00:00
 #PBS -j oe
 #PBS -o scaling_all.out
@@ -40,6 +40,9 @@ cd "$WORK_DIR" || exit 1
 
 # Run all processor counts sequentially on the SAME node.
 # This guarantees identical hardware conditions for a fair comparison.
+# Use multiple repeats so we can take the minimum (filters out contention).
+REPEATS=1
+
 for NP in 1 2 4 8 16; do
     echo ""
     echo "============================================="
@@ -48,12 +51,12 @@ for NP in 1 2 4 8 16; do
     # Verify binding: shows exactly which core each rank is pinned to.
     # Look for "[B] core" in the output — confirms 1 rank per physical core.
     echo "Binding report for nprocs=$NP:"
-    mpirun -np "$NP" --bind-to core --map-by core --report-bindings hostname 2>&1 | head -20
+    mpirun -np "$NP" --bind-to core --map-by socket --report-bindings hostname 2>&1 | head -20
     echo "---------------------------------------------"
     echo "============================================="
     python3 -u scalability_single.py \
         --nprocs "$NP" \
-        --repeats 1 \
+        --repeats "$REPEATS" \
         --use-pbs-nodefile
     echo "Finished nprocs=$NP at $(date)"
 done

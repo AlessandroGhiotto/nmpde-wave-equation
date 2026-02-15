@@ -1,1 +1,24 @@
+  GNU nano 7.2                                          scalability-results-all.csv                                                   
 scheme,binary,nprocs,repeat,Nel,R,Dt,T,Theta,Beta,Gamma,returncode,seconds,cmd,stdout_log,stderr_log
+theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,1,1,320,1,0.005,3.0,0.5,,,0,165.500467,mpirun -np 1 --hostfile>
+newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,1,1,320,1,0.005,3.0,,0.25,0.5,0,88.764580,mpirun -np 1 --h>
+theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,2,1,320,1,0.005,3.0,0.5,,,0,324.119410,mpirun -np 2 --hostfile>
+newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,2,1,320,1,0.005,3.0,,0.25,0.5,0,143.759419,mpirun -np 2 -->
+theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,4,1,320,1,0.005,3.0,0.5,,,0,179.091733,mpirun -np 4 --hostfile>
+newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,4,1,320,1,0.005,3.0,,0.25,0.5,0,84.357037,mpirun -np 4 --h>
+theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,8,1,320,1,0.005,3.0,0.5,,,0,98.117921,mpirun -np 8 --hostfile >
+newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,8,1,320,1,0.005,3.0,,0.25,0.5,0,44.983994,mpirun -np 8 --h>
+theta,/scratch_local/nmpde-wave-equation_9381.login01/build/main-theta,16,1,320,1,0.005,3.0,0.5,,,0,57.886667,mpirun -np 16 --hostfil>
+newmark,/scratch_local/nmpde-wave-equation_9381.login01/build/main-newmark,16,1,320,1,0.005,3.0,,0.25,0.5,0,27.842570,mpirun -np 16 ->
+
+
+
+
+
+
+
+
+
+
+^G Help         ^O Write Out    ^W Where Is     ^K Cut          ^T Execute      ^C Location     M-U Undo        M-A Set Mark
+^X Exit         ^R Read File    ^\ Replace      ^U Paste        ^J Justify      ^/ Go To Line   M-E Redo        M-6 Copy

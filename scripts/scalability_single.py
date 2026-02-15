@@ -118,9 +118,12 @@ def _build_mpi_cmd(binary: Path, param_file: Path) -> list[str]:
                 cmd += ["--hostfile", str(clean_hf)]
 
     # Explicit core binding: ensures each MPI rank gets its own physical core.
-    # Prevents accidental hyperthreading (2 ranks sharing 1 core).
-    if args.bind_to_core and NPROCS > 1:
-        cmd += ["--bind-to", "core", "--map-by", "core"]
+    # --map-by socket: distributes ranks round-robin across NUMA sockets,
+    #   so p=2 gets 1 rank per socket instead of both on socket 0.
+    # --bind-to core: pins each rank to a single physical core.
+    # Applied to ALL runs including p=1 for a fair comparison.
+    if args.bind_to_core:
+        cmd += ["--bind-to", "core", "--map-by", "socket"]
 
     # User-provided MPI args (portable way to encode site-specific binding/mapping).
     cmd += list(args.mpi_arg)
