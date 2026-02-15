@@ -1,12 +1,12 @@
 #!/bin/bash
-#PBS -N scaling_all
+#PBS -N scaling_final
 #PBS -q cpu
-## Request max allowed CPUs on a single node.
-## Not exclusive, but pick a quiet node. Change host= as needed.
+## Request 16 CPUs (max allowed). We'll also try nprocs=32 opportunistically
+## if the node has idle cores — mpirun will succeed if enough are free.
 #PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu04
-#PBS -l walltime=24:00:00
+#PBS -l walltime=48:00:00
 #PBS -j oe
-#PBS -o scaling_all.out
+#PBS -o scaling_final.out
 
 SOURCE_DIR="$PBS_O_WORKDIR"
 PROJECT_ROOT="$SOURCE_DIR/.."
@@ -15,7 +15,7 @@ SCRATCH_ROOT="/scratch_local/nmpde-wave-equation_${PBS_JOBID}"
 WORK_DIR="$SCRATCH_ROOT/scripts"
 DEST_DIR="/home/u11177200/nmpde-wave-equation/scripts"
 
-exec > "${SOURCE_DIR}/scaling_all.log" 2>&1
+exec > "${SOURCE_DIR}/scaling_final.log" 2>&1
 
 # Avoid accidental OpenMP oversubscription
 export OMP_NUM_THREADS=1
@@ -41,15 +41,14 @@ cd "$WORK_DIR" || exit 1
 # Run all processor counts sequentially on the SAME node.
 # This guarantees identical hardware conditions for a fair comparison.
 # Use multiple repeats so we can take the minimum (filters out contention).
-REPEATS=1
+REPEATS=3
 
+# Guaranteed runs (within our 16-CPU allocation)
 for NP in 1 2 4 8 16; do
     echo ""
     echo "============================================="
     echo "Running with nprocs=$NP at $(date)"
     echo "---------------------------------------------"
-    # Verify binding: shows exactly which core each rank is pinned to.
-    # Look for "[B] core" in the output — confirms 1 rank per physical core.
     echo "Binding report for nprocs=$NP:"
     mpirun -np "$NP" --bind-to core --map-by socket --report-bindings hostname 2>&1 | head -20
     echo "---------------------------------------------"
@@ -61,13 +60,36 @@ for NP in 1 2 4 8 16; do
     echo "Finished nprocs=$NP at $(date)"
 done
 
+# Opportunistic run with 32 cores (works if node has idle cores)
+echo ""
+echo "============================================="
+echo "Attempting nprocs=32 (opportunistic, may fail if node is busy)"
+echo "============================================="
+NP=32
+# --oversubscribe allows more ranks than reserved slots
+mpirun -np "$NP" --bind-to core --map-by socket --oversubscribe --report-bindings hostname 2>&1 | head -40
+if [ $? -eq 0 ]; then
+    echo "32-core binding succeeded, running benchmark..."
+    python3 -u scalability_single.py \
+        --nprocs "$NP" \
+        --repeats "$REPEATS" \
+        --use-pbs-nodefile \
+        --mpi-arg=--oversubscribe
+    echo "Finished nprocs=$NP at $(date)"
+else
+    echo "32-core run failed (node likely busy). Skipping."
+fi
+
 # Merge all per-nprocs CSVs into one
 echo ""
 echo "Merging results..."
 MERGED="scalability-results-all.csv"
 head -1 scalability-results-1.csv > "$MERGED"
-for NP in 1 2 4 8 16; do
-    tail -n +2 "scalability-results-${NP}.csv" >> "$MERGED"
+for NP in 1 2 4 8 16 32; do
+    CSV="scalability-results-${NP}.csv"
+    if [ -f "$CSV" ]; then
+        tail -n +2 "$CSV" >> "$MERGED"
+    fi
 done
 
 mkdir -p "$DEST_DIR"

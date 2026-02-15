@@ -56,17 +56,13 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 
 BASE_PARAM = (PROJECT_ROOT / "parameters" / "standing-mode-wsol.json").resolve()
 
-NEL = "320"
+NEL = "640"
 R = "1"
-DT = "0.005"
-T_VALUE = "3.0"
+DT = "0.0008"
+T_VALUE = "0.5"
 
 BINARY_THETA = (PROJECT_ROOT / "build" / "main-theta").resolve()
 BINARY_NEWMARK = (PROJECT_ROOT / "build" / "main-newmark").resolve()
-
-THETA_VALUE = "0.5"
-BETA_VALUE = "0.25"
-GAMMA_VALUE = "0.5"
 
 RESULTS_CSV = Path(f"scalability-results-{NPROCS}.csv")
 
@@ -152,8 +148,13 @@ def main():
     base = load_base(BASE_PARAM)
 
     schemes = [
-        ("theta", BINARY_THETA, {"Theta": THETA_VALUE}),
-        ("newmark", BINARY_NEWMARK, {"Beta": BETA_VALUE, "Gamma": GAMMA_VALUE}),
+        # Theta method: θ=0 (Forward Euler), θ=0.5 (Crank-Nicolson), θ=1 (Backward Euler)
+        ("theta-0.0", BINARY_THETA, {"Theta": "0.0"}),
+        ("theta-0.5", BINARY_THETA, {"Theta": "0.5"}),
+        ("theta-1.0", BINARY_THETA, {"Theta": "1.0"}),
+        # Newmark: β=0 (explicit), β=0.25 (implicit), both γ=0.5
+        ("newmark-0.00", BINARY_NEWMARK, {"Beta": "0.0", "Gamma": "0.5"}),
+        ("newmark-0.25", BINARY_NEWMARK, {"Beta": "0.25", "Gamma": "0.5"}),
     ]
 
     header = [
@@ -170,9 +171,9 @@ def main():
         "Gamma",
         "returncode",
         "seconds",
-        "cmd",
-        "stdout_log",
-        "stderr_log",
+        # "cmd",
+        # "stdout_log",
+        # "stderr_log",
     ]
 
     with RESULTS_CSV.open("w", newline="") as f, tempfile.TemporaryDirectory() as tmp:
@@ -208,9 +209,9 @@ def main():
                         "Gamma": overrides.get("Gamma", ""),
                         "returncode": code,
                         "seconds": f"{secs:.6f}",
-                        "cmd": cmd,
-                        "stdout_log": out_log,
-                        "stderr_log": err_log,
+                        # "cmd": cmd,
+                        # "stdout_log": out_log,
+                        # "stderr_log": err_log,
                     }
                 )
 
