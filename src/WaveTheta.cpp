@@ -265,9 +265,9 @@ void WaveTheta::solve_u()
     TrilinosWrappers::PreconditionAMG preconditioner;
     {
         TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
-        amg_data.elliptic              = true;
+        amg_data.elliptic = true;
         amg_data.higher_order_elements = false;
-        amg_data.smoother_sweeps       = 2;
+        amg_data.smoother_sweeps = 2;
         amg_data.aggregation_threshold = 0.02;
         preconditioner.initialize(system_matrix, amg_data);
     }
@@ -309,9 +309,9 @@ void WaveTheta::solve_v()
     TrilinosWrappers::PreconditionAMG preconditioner;
     {
         TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
-        amg_data.elliptic              = true;
+        amg_data.elliptic = true;
         amg_data.higher_order_elements = false;
-        amg_data.smoother_sweeps       = 2;
+        amg_data.smoother_sweeps = 2;
         amg_data.aggregation_threshold = 0.02;
         preconditioner.initialize(system_matrix, amg_data);
     }
