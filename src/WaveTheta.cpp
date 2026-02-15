@@ -30,6 +30,8 @@ void WaveTheta::setup()
         stiffness_matrix.reinit(sparsity);
         matrix_u.reinit(sparsity);
         matrix_v.reinit(sparsity);
+        system_matrix_u.reinit(sparsity);
+        system_matrix_v.reinit(sparsity);
 
         pcout << "  Initializing vectors" << std::endl;
         solution_u.reinit(locally_owned_dofs, MPI_COMM_WORLD);
@@ -102,18 +104,7 @@ void WaveTheta::assemble_matrices()
 
     // Matrix for v linear system: M
     matrix_v.copy_from(mass_matrix);
-
-    // Build AMG preconditioners once on the clean matrices (reused every time step)
-    {
-        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
-        amg_data.elliptic = true;
-        amg_data.higher_order_elements = false;
-        amg_data.smoother_sweeps = 2;
-        amg_data.aggregation_threshold = 0.02;
-        preconditioner_u.initialize(matrix_u, amg_data);
-        preconditioner_v.initialize(matrix_v, amg_data);
-    }
-    pcout << "  AMG preconditioners built on matrix_u and matrix_v" << std::endl;
+    // AMG preconditioners will be built on first solve (on BC-modified matrices)
 }
 
 void WaveTheta::assemble_rhs_u()
@@ -250,10 +241,8 @@ void WaveTheta::assemble_rhs_v()
 
 void WaveTheta::solve_u()
 {
-    // Create a temporary system matrix to apply BCs without destroying the global matrix_u
-    TrilinosWrappers::SparseMatrix system_matrix;
-    system_matrix.reinit(matrix_u);
-    system_matrix.copy_from(matrix_u);
+    // Copy clean matrix into persistent system_matrix_u (no reinit — preserves AMG pointer)
+    system_matrix_u.copy_from(matrix_u);
 
     // Dirichlet boundary conditions at t^{n+1}
     // Note: time has already been incremented to t^{n+1} in run()
@@ -271,24 +260,34 @@ void WaveTheta::solve_u()
                                                  boundary_values_u);
 
         MatrixTools::apply_boundary_values(
-            boundary_values_u, system_matrix, solution_u, system_rhs, true);
+            boundary_values_u, system_matrix_u, solution_u, system_rhs, true);
+    }
+
+    // Build AMG on the first call (on the actual BC-modified matrix)
+    if (!preconditioner_u_initialized)
+    {
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner_u.initialize(system_matrix_u, amg_data);
+        preconditioner_u_initialized = true;
+        pcout << "  AMG preconditioner built on BC-modified matrix_u" << std::endl;
     }
 
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    // Use cached AMG preconditioner (built once in assemble_matrices)
-    solver.solve(system_matrix, solution_u, system_rhs, preconditioner_u);
+    solver.solve(system_matrix_u, solution_u, system_rhs, preconditioner_u);
 
     current_iterations_u = solver_control.last_step();
 }
 
 void WaveTheta::solve_v()
 {
-    // Create a temporary system matrix to apply BCs without destroying the global matrix_v
-    TrilinosWrappers::SparseMatrix system_matrix;
-    system_matrix.reinit(matrix_v);
-    system_matrix.copy_from(matrix_v);
+    // Copy clean matrix into persistent system_matrix_v (no reinit — preserves AMG pointer)
+    system_matrix_v.copy_from(matrix_v);
 
     // Boundary condition at t^{n+1}
     // Note: time has already been incremented to t^{n+1} in run()
@@ -306,14 +305,26 @@ void WaveTheta::solve_v()
                                                  boundary_values_v);
 
         MatrixTools::apply_boundary_values(
-            boundary_values_v, system_matrix, solution_v, system_rhs, true);
+            boundary_values_v, system_matrix_v, solution_v, system_rhs, true);
+    }
+
+    // Build AMG on the first call (on the actual BC-modified matrix)
+    if (!preconditioner_v_initialized)
+    {
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner_v.initialize(system_matrix_v, amg_data);
+        preconditioner_v_initialized = true;
+        pcout << "  AMG preconditioner built on BC-modified matrix_v" << std::endl;
     }
 
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    // Use cached AMG preconditioner (built once in assemble_matrices)
-    solver.solve(system_matrix, solution_v, system_rhs, preconditioner_v);
+    solver.solve(system_matrix_v, solution_v, system_rhs, preconditioner_v);
 
     current_iterations_v = solver_control.last_step();
 }

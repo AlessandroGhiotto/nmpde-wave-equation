@@ -57,11 +57,15 @@ class WaveNewmark : public WaveEquationBase
     TrilinosWrappers::MPI::Vector solution_a;
     TrilinosWrappers::MPI::Vector old_solution_a;
 
-    // System matrix (specific to Newmark)
+    // Clean system matrix (M + beta*dt^2*K, no BCs)
     TrilinosWrappers::SparseMatrix matrix_a;
 
-    // Cached AMG preconditioner (built once on matrix_a, reused every time step)
+    // Persistent BC-modified system matrix (AMG keeps a pointer to this)
+    TrilinosWrappers::SparseMatrix system_matrix_a;
+
+    // Cached AMG preconditioner (built on system_matrix_a at first solve, reused)
     TrilinosWrappers::PreconditionAMG preconditioner_a;
+    bool preconditioner_a_initialized = false;
 
     unsigned int current_iterations;
 };

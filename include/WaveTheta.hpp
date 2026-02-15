@@ -50,13 +50,19 @@ class WaveTheta : public WaveEquationBase
     // Theta parameter for the theta method
     const double theta;
 
-    // System matrices (specific to theta-method)
+    // Clean system matrices (no BCs)
     TrilinosWrappers::SparseMatrix matrix_u;
     TrilinosWrappers::SparseMatrix matrix_v;
 
-    // Cached AMG preconditioners (built once, reused every time step)
+    // Persistent BC-modified system matrices (AMG keeps pointers to these)
+    TrilinosWrappers::SparseMatrix system_matrix_u;
+    TrilinosWrappers::SparseMatrix system_matrix_v;
+
+    // Cached AMG preconditioners (built on system_matrix_{u,v} at first solve, reused)
     TrilinosWrappers::PreconditionAMG preconditioner_u;
     TrilinosWrappers::PreconditionAMG preconditioner_v;
+    bool preconditioner_u_initialized = false;
+    bool preconditioner_v_initialized = false;
 
     unsigned int current_iterations_u;
     unsigned int current_iterations_v;

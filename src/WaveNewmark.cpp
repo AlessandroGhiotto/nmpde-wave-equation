@@ -29,6 +29,7 @@ void WaveNewmark::setup()
         mass_matrix.reinit(sparsity);
         stiffness_matrix.reinit(sparsity);
         matrix_a.reinit(sparsity);
+        system_matrix_a.reinit(sparsity);
 
         pcout << "  Initializing vectors" << std::endl;
         solution_u.reinit(locally_owned_dofs, MPI_COMM_WORLD);
@@ -100,17 +101,7 @@ void WaveNewmark::assemble_matrices()
     // Matrix for a linear system: M + Δt^2 β A
     matrix_a.copy_from(mass_matrix);
     matrix_a.add(beta * delta_t * delta_t, stiffness_matrix);
-
-    // Build AMG preconditioner once on the clean matrix (reused every time step)
-    {
-        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
-        amg_data.elliptic = true;
-        amg_data.higher_order_elements = false;
-        amg_data.smoother_sweeps = 2;
-        amg_data.aggregation_threshold = 0.02;
-        preconditioner_a.initialize(matrix_a, amg_data);
-    }
-    pcout << "  AMG preconditioner built on matrix_a" << std::endl;
+    // AMG preconditioner will be built on first solve (on BC-modified matrix)
 }
 
 void WaveNewmark::assemble_rhs()
@@ -176,10 +167,8 @@ void WaveNewmark::assemble_rhs()
 
 void WaveNewmark::solve_a()
 {
-    // Create a temporary system matrix to apply BCs without destroying the global matrix_a
-    TrilinosWrappers::SparseMatrix system_matrix;
-    system_matrix.reinit(matrix_a);
-    system_matrix.copy_from(matrix_a);
+    // Copy clean matrix into persistent system_matrix_a (no reinit — preserves AMG pointer)
+    system_matrix_a.copy_from(matrix_a);
 
     // Calculate boundary values for acceleration a^{n+1} derived from u^{n+1} = g(t^{n+1})
     // u^{n+1} = u_pred + beta * dt^2 * a^{n+1}
@@ -214,14 +203,26 @@ void WaveNewmark::solve_a()
 
     // Apply boundary values to the system matrix and RHS
     // eliminate_columns = true preserves symmetry for CG solver
-    MatrixTools::apply_boundary_values(boundary_values_a, system_matrix,
+    MatrixTools::apply_boundary_values(boundary_values_a, system_matrix_a,
                                        solution_a, system_rhs, true);
+
+    // Build AMG on the first call (on the actual BC-modified matrix)
+    if (!preconditioner_a_initialized)
+    {
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner_a.initialize(system_matrix_a, amg_data);
+        preconditioner_a_initialized = true;
+        pcout << "  AMG preconditioner built on BC-modified matrix_a" << std::endl;
+    }
 
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    // Use cached AMG preconditioner (built once in assemble_matrices)
-    solver.solve(system_matrix, solution_a, system_rhs, preconditioner_a);
+    solver.solve(system_matrix_a, solution_a, system_rhs, preconditioner_a);
 
     current_iterations = solver_control.last_step();
 }
