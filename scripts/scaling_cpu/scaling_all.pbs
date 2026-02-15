@@ -1,0 +1,77 @@
+#!/bin/bash
+#PBS -N scaling_all
+#PBS -q cpu
+## Request max allowed CPUs on a single node.
+## Not exclusive, but pick a quiet node. Change host= as needed.
+#PBS -l select=1:ncpus=16:mpiprocs=16
+#PBS -l walltime=24:00:00
+#PBS -j oe
+#PBS -o scaling_all.out
+
+SOURCE_DIR="$PBS_O_WORKDIR"
+PROJECT_ROOT="$SOURCE_DIR/.."
+
+SCRATCH_ROOT="/scratch_local/nmpde-wave-equation_${PBS_JOBID}"
+WORK_DIR="$SCRATCH_ROOT/scripts"
+DEST_DIR="/home/u11177200/nmpde-wave-equation/scripts"
+
+exec > "${SOURCE_DIR}/scaling_all.log" 2>&1
+
+# Avoid accidental OpenMP oversubscription
+export OMP_NUM_THREADS=1
+export PYTHONUNBUFFERED=1
+
+echo "============================================="
+echo "Job started on $(date)"
+echo "Node: $(hostname)"
+echo "PBS_NODEFILE contents:"
+cat "$PBS_NODEFILE"
+echo "============================================="
+
+rm -rf "$SCRATCH_ROOT"
+mkdir -p "$SCRATCH_ROOT"
+
+echo "Copying project to scratch..."
+cp -r "$PROJECT_ROOT/scripts"    "$SCRATCH_ROOT/"
+cp -r "$PROJECT_ROOT/parameters" "$SCRATCH_ROOT/"
+cp -r "$PROJECT_ROOT/build"      "$SCRATCH_ROOT/"
+
+cd "$WORK_DIR" || exit 1
+
+# Run all processor counts sequentially on the SAME node.
+# This guarantees identical hardware conditions for a fair comparison.
+for NP in 1 2 4 8 16; do
+    echo ""
+    echo "============================================="
+    echo "Running with nprocs=$NP at $(date)"
+    echo "---------------------------------------------"
+    # Verify binding: shows exactly which core each rank is pinned to.
+    # Look for "[B] core" in the output — confirms 1 rank per physical core.
+    echo "Binding report for nprocs=$NP:"
+    mpirun -np "$NP" --bind-to core --map-by core --report-bindings hostname 2>&1 | head -20
+    echo "---------------------------------------------"
+    echo "============================================="
+    python3 -u scalability_single.py \
+        --nprocs "$NP" \
+        --repeats 1 \
+        --use-pbs-nodefile
+    echo "Finished nprocs=$NP at $(date)"
+done
+
+# Merge all per-nprocs CSVs into one
+echo ""
+echo "Merging results..."
+MERGED="scalability-results-all.csv"
+head -1 scalability-results-1.csv > "$MERGED"
+for NP in 1 2 4 8 16; do
+    tail -n +2 "scalability-results-${NP}.csv" >> "$MERGED"
+done
+
+mkdir -p "$DEST_DIR"
+cp -f scalability-results-*.csv "$DEST_DIR/"
+cp -rf run-logs "$DEST_DIR/run-logs-all-${PBS_JOBID}" || true
+
+echo ""
+echo "============================================="
+echo "All done. Job finished on $(date)"
+echo "============================================="

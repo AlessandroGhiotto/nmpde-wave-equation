@@ -27,6 +27,19 @@ parser.add_argument(
     help="Extra MPI launcher arg (repeatable). Example: --mpi-arg=--bind-to --mpi-arg=core",
 )
 parser.add_argument(
+    "--bind-to-core",
+    action="store_true",
+    default=True,
+    help="Add --bind-to core --map-by core to mpirun (default: True). "
+    "Ensures each MPI rank lands on its own physical core. "
+    "Disable with --no-bind-to-core if your MPI does not support it.",
+)
+parser.add_argument(
+    "--no-bind-to-core",
+    action="store_false",
+    dest="bind_to_core",
+)
+parser.add_argument(
     "--use-pbs-nodefile",
     action="store_true",
     help="If $PBS_NODEFILE is set, pass it as a hostfile to the launcher (OpenMPI-style --hostfile).",
@@ -90,10 +103,24 @@ def _build_mpi_cmd(binary: Path, param_file: Path) -> list[str]:
     cmd = [args.launcher, "-np", str(NPROCS)]
 
     # Optional: integrate PBS nodefile (common on clusters).
+    # We generate a clean hostfile with exactly NPROCS slots on the first
+    # hostname found in $PBS_NODEFILE.  This avoids scattering ranks across
+    # entries when the original nodefile has more lines than NPROCS.
     if args.use_pbs_nodefile:
         pbs_nodefile = os.environ.get("PBS_NODEFILE")
-        if pbs_nodefile:
-            cmd += ["--hostfile", pbs_nodefile]
+        if pbs_nodefile and Path(pbs_nodefile).exists():
+            # Read unique hostname(s); use the first one (single-node job).
+            hosts = list(dict.fromkeys(Path(pbs_nodefile).read_text().splitlines()))
+            host = hosts[0] if hosts else None
+            if host:
+                clean_hf = Path(f"/tmp/hostfile_np{NPROCS}_{os.getpid()}")
+                clean_hf.write_text(f"{host} slots={NPROCS}\n")
+                cmd += ["--hostfile", str(clean_hf)]
+
+    # Explicit core binding: ensures each MPI rank gets its own physical core.
+    # Prevents accidental hyperthreading (2 ranks sharing 1 core).
+    if args.bind_to_core and NPROCS > 1:
+        cmd += ["--bind-to", "core", "--map-by", "core"]
 
     # User-provided MPI args (portable way to encode site-specific binding/mapping).
     cmd += list(args.mpi_arg)
