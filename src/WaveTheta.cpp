@@ -102,6 +102,18 @@ void WaveTheta::assemble_matrices()
 
     // Matrix for v linear system: M
     matrix_v.copy_from(mass_matrix);
+
+    // Build AMG preconditioners once on the clean matrices (reused every time step)
+    {
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner_u.initialize(matrix_u, amg_data);
+        preconditioner_v.initialize(matrix_v, amg_data);
+    }
+    pcout << "  AMG preconditioners built on matrix_u and matrix_v" << std::endl;
 }
 
 void WaveTheta::assemble_rhs_u()
@@ -262,20 +274,11 @@ void WaveTheta::solve_u()
             boundary_values_u, system_matrix, solution_u, system_rhs, true);
     }
 
-    TrilinosWrappers::PreconditionAMG preconditioner;
-    {
-        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
-        amg_data.elliptic = true;
-        amg_data.higher_order_elements = false;
-        amg_data.smoother_sweeps = 2;
-        amg_data.aggregation_threshold = 0.02;
-        preconditioner.initialize(system_matrix, amg_data);
-    }
-
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    solver.solve(system_matrix, solution_u, system_rhs, preconditioner);
+    // Use cached AMG preconditioner (built once in assemble_matrices)
+    solver.solve(system_matrix, solution_u, system_rhs, preconditioner_u);
 
     current_iterations_u = solver_control.last_step();
 }
@@ -306,20 +309,11 @@ void WaveTheta::solve_v()
             boundary_values_v, system_matrix, solution_v, system_rhs, true);
     }
 
-    TrilinosWrappers::PreconditionAMG preconditioner;
-    {
-        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
-        amg_data.elliptic = true;
-        amg_data.higher_order_elements = false;
-        amg_data.smoother_sweeps = 2;
-        amg_data.aggregation_threshold = 0.02;
-        preconditioner.initialize(system_matrix, amg_data);
-    }
-
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    solver.solve(system_matrix, solution_v, system_rhs, preconditioner);
+    // Use cached AMG preconditioner (built once in assemble_matrices)
+    solver.solve(system_matrix, solution_v, system_rhs, preconditioner_v);
 
     current_iterations_v = solver_control.last_step();
 }

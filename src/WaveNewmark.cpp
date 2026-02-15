@@ -100,6 +100,17 @@ void WaveNewmark::assemble_matrices()
     // Matrix for a linear system: M + Δt^2 β A
     matrix_a.copy_from(mass_matrix);
     matrix_a.add(beta * delta_t * delta_t, stiffness_matrix);
+
+    // Build AMG preconditioner once on the clean matrix (reused every time step)
+    {
+        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
+        amg_data.elliptic = true;
+        amg_data.higher_order_elements = false;
+        amg_data.smoother_sweeps = 2;
+        amg_data.aggregation_threshold = 0.02;
+        preconditioner_a.initialize(matrix_a, amg_data);
+    }
+    pcout << "  AMG preconditioner built on matrix_a" << std::endl;
 }
 
 void WaveNewmark::assemble_rhs()
@@ -206,20 +217,11 @@ void WaveNewmark::solve_a()
     MatrixTools::apply_boundary_values(boundary_values_a, system_matrix,
                                        solution_a, system_rhs, true);
 
-    TrilinosWrappers::PreconditionAMG preconditioner;
-    {
-        TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
-        amg_data.elliptic = true;
-        amg_data.higher_order_elements = false;
-        amg_data.smoother_sweeps = 2;
-        amg_data.aggregation_threshold = 0.02;
-        preconditioner.initialize(system_matrix, amg_data);
-    }
-
     ReductionControl solver_control(10000, 1e-12, 1e-6);
     SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-    solver.solve(system_matrix, solution_a, system_rhs, preconditioner);
+    // Use cached AMG preconditioner (built once in assemble_matrices)
+    solver.solve(system_matrix, solution_a, system_rhs, preconditioner_a);
 
     current_iterations = solver_control.last_step();
 }
@@ -305,16 +307,10 @@ void WaveNewmark::run()
         f_vec.compress(VectorOperation::add);
         rhs_a.add(1.0, f_vec);
 
-        // Solve M a^0 = f(0) - K u^0
-        TrilinosWrappers::PreconditionAMG preconditioner;
-        {
-            TrilinosWrappers::PreconditionAMG::AdditionalData amg_data;
-            amg_data.elliptic = true;
-            amg_data.higher_order_elements = false;
-            amg_data.smoother_sweeps = 2;
-            amg_data.aggregation_threshold = 0.02;
-            preconditioner.initialize(mass_matrix, amg_data);
-        }
+        // Solve M a^0 = f(0) - K u^0  (one-time solve, use simple SSOR)
+        TrilinosWrappers::PreconditionSSOR preconditioner;
+        preconditioner.initialize(
+            mass_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
         ReductionControl solver_control(10000, 1e-12, 1e-6);
         SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);

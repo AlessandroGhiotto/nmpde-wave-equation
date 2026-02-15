@@ -54,6 +54,10 @@ class WaveTheta : public WaveEquationBase
     TrilinosWrappers::SparseMatrix matrix_u;
     TrilinosWrappers::SparseMatrix matrix_v;
 
+    // Cached AMG preconditioners (built once, reused every time step)
+    TrilinosWrappers::PreconditionAMG preconditioner_u;
+    TrilinosWrappers::PreconditionAMG preconditioner_v;
+
     unsigned int current_iterations_u;
     unsigned int current_iterations_v;
 };

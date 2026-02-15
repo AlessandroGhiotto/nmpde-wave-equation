@@ -60,6 +60,9 @@ class WaveNewmark : public WaveEquationBase
     // System matrix (specific to Newmark)
     TrilinosWrappers::SparseMatrix matrix_a;
 
+    // Cached AMG preconditioner (built once on matrix_a, reused every time step)
+    TrilinosWrappers::PreconditionAMG preconditioner_a;
+
     unsigned int current_iterations;
 };
 
