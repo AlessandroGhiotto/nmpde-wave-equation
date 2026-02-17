@@ -182,11 +182,10 @@ void WaveNewmark::solve_a()
     for (const auto id : mesh.get_boundary_ids())
         VectorTools::interpolate_boundary_values(dof_handler, id, g, boundary_values_u);
 
-    const double beta_dt2 = beta * delta_t * delta_t;
-
-    // Assuming implicit Newmark (beta > 0)
+    // Implicit Newmark (beta > 0): derive a-BC from u^{n+1} = g
     if (beta > 1e-12)
     {
+        const double beta_dt2 = beta * delta_t * delta_t;
         for (const auto& bv : boundary_values_u)
         {
             const types::global_dof_index dof = bv.first;
@@ -199,6 +198,32 @@ void WaveNewmark::solve_a()
 
             boundary_values_a[dof] = (g_val - u_pred) / beta_dt2;
         }
+    }
+    else
+    {
+        // Explicit Newmark (β ≈ 0): acceleration BC = d²g/dt²
+        // Central finite difference: a_∂Ω = (g(t_{n+1}) - 2g(t_n) + g(t_{n-1})) / dt²
+        // For homogeneous Dirichlet (g ≡ 0), this naturally yields a = 0.
+
+        std::map<types::global_dof_index, double> bv_tn, bv_tnm1;
+
+        g.set_time(time - delta_t);
+        for (const auto id : mesh.get_boundary_ids())
+            VectorTools::interpolate_boundary_values(dof_handler, id, g, bv_tn);
+
+        g.set_time(time - 2.0 * delta_t);
+        for (const auto id : mesh.get_boundary_ids())
+            VectorTools::interpolate_boundary_values(dof_handler, id, g, bv_tnm1);
+
+        const double inv_dt2 = 1.0 / (delta_t * delta_t);
+        for (const auto& bv : boundary_values_u)
+        {
+            const types::global_dof_index dof = bv.first;
+            boundary_values_a[dof] =
+                (bv.second - 2.0 * bv_tn[dof] + bv_tnm1[dof]) * inv_dt2;
+        }
+
+        g.set_time(time); // restore to t^{n+1}
     }
 
     // Apply boundary values to the system matrix and RHS
@@ -308,15 +333,47 @@ void WaveNewmark::run()
         f_vec.compress(VectorOperation::add);
         rhs_a.add(1.0, f_vec);
 
-        // Solve M a^0 = f(0) - K u^0  (one-time solve, use simple SSOR)
+        // Apply boundary conditions for initial acceleration:
+        // a^0_∂Ω = d²g/dt²(0) ≈ (g(dt) - 2g(0) + g(-dt)) / dt²
+        // For homogeneous Dirichlet (g ≡ 0), this gives a = 0 on ∂Ω.
+        {
+            std::map<types::global_dof_index, double> boundary_values_a0;
+            std::map<types::global_dof_index, double> bv_gp, bv_g0, bv_gm;
+
+            g.set_time(delta_t);
+            for (const auto id : mesh.get_boundary_ids())
+                VectorTools::interpolate_boundary_values(dof_handler, id, g, bv_gp);
+
+            g.set_time(0.0);
+            for (const auto id : mesh.get_boundary_ids())
+                VectorTools::interpolate_boundary_values(dof_handler, id, g, bv_g0);
+
+            g.set_time(-delta_t);
+            for (const auto id : mesh.get_boundary_ids())
+                VectorTools::interpolate_boundary_values(dof_handler, id, g, bv_gm);
+
+            const double inv_dt2 = 1.0 / (delta_t * delta_t);
+            for (const auto& p : bv_g0)
+                boundary_values_a0[p.first] =
+                    (bv_gp[p.first] - 2.0 * p.second + bv_gm[p.first]) * inv_dt2;
+
+            g.set_time(0.0); // restore
+
+            // Use system_matrix_a as temporary BC-modified mass matrix
+            system_matrix_a.copy_from(mass_matrix);
+            MatrixTools::apply_boundary_values(boundary_values_a0, system_matrix_a,
+                                               old_solution_a, rhs_a, true);
+        }
+
+        // Solve with BC-modified mass matrix (one-time solve, use simple SSOR)
         TrilinosWrappers::PreconditionSSOR preconditioner;
         preconditioner.initialize(
-            mass_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+            system_matrix_a, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
         ReductionControl solver_control(10000, 1e-12, 1e-6);
         SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
 
-        solver.solve(mass_matrix, old_solution_a, rhs_a, preconditioner);
+        solver.solve(system_matrix_a, old_solution_a, rhs_a, preconditioner);
         solution_a = old_solution_a;
 
         pcout << "  ||a0|| = " << old_solution_a.l2_norm()

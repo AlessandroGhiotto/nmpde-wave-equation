@@ -59,7 +59,7 @@ parser.add_argument(
     "--dt",
     type=float,
     nargs="+",
-    default=[0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002],
+    default=[0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002, 0.0001],
 )
 parser.add_argument("--T", type=float, default=1.0)
 parser.add_argument(
@@ -181,12 +181,17 @@ def write_param_file(
     out_path.write_text(json.dumps(params, indent=2))
 
 
-def build_mpi_cmd(binary: Path, param_file: Path) -> list[str]:
-    """Build the MPI launch command."""
+def build_mpi_cmd(binary: Path, param_file: Path, nel: int = None) -> list[str]:
+    """Build the MPI launch command.
+
+    For very small meshes (Nel <= 10), uses 1 process to avoid MPI overhead/errors.
+    """
     if not binary.exists():
         raise FileNotFoundError(f"Binary not found: {binary}")
 
-    cmd = [args.launcher, "-np", str(args.nprocs)]
+    # Use single process for tiny meshes
+    nprocs = 1 if (nel is not None and nel <= 10) else args.nprocs
+    cmd = [args.launcher, "-np", str(nprocs)]
 
     # PBS nodefile integration
     if args.use_pbs_nodefile:
@@ -207,9 +212,11 @@ def build_mpi_cmd(binary: Path, param_file: Path) -> list[str]:
     return cmd
 
 
-def run_single(binary: Path, param_file: Path, tag: str, logs_dir: Path):
+def run_single(
+    binary: Path, param_file: Path, tag: str, logs_dir: Path, nel: int = None
+):
     """Run one simulation. Returns (returncode, elapsed_seconds)."""
-    cmd = build_mpi_cmd(binary, param_file)
+    cmd = build_mpi_cmd(binary, param_file, nel)
     stdout_path = logs_dir / f"{tag}.out"
     stderr_path = logs_dir / f"{tag}.err"
 
@@ -302,7 +309,9 @@ def main():
                 )
 
                 # Run
-                code, elapsed = run_single(sdef["binary"], param_file, tag, logs_dir)
+                code, elapsed = run_single(
+                    sdef["binary"], param_file, tag, logs_dir, nel
+                )
                 status = (
                     "OK"
                     if code == 0
