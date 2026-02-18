@@ -1,5 +1,6 @@
 #include "WaveEquationBase.hpp"
 #include <cstdlib> // getenv
+#include <mpi.h>
 
 namespace
 {
@@ -147,6 +148,60 @@ void WaveEquationBase::compute_and_log_energy()
 
         if (energy_log_file.is_open())
             energy_log_file << timestep_number << "," << time << "," << current_energy << std::endl;
+    }
+}
+
+void WaveEquationBase::log_point_probe()
+{
+    // Evaluate solution u at the centre of the domain.
+    // For a distributed mesh only ONE process owns the cell containing
+    // the probe point, so we use VectorTools::point_value which
+    // handles the parallel lookup for us.
+
+    const Point<dim> probe_point(
+        0.5 * (geometry.first[0] + geometry.second[0]),
+        0.5 * (geometry.first[1] + geometry.second[1]));
+
+    // We need a ghosted vector for point evaluation.
+    IndexSet locally_relevant_dofs = DoFTools::extract_locally_relevant_dofs(dof_handler);
+    TrilinosWrappers::MPI::Vector solution_ghosted;
+    solution_ghosted.reinit(locally_relevant_dofs, mesh.get_communicator());
+    solution_ghosted = solution_u;
+
+    FE_SimplexP<dim> fe_linear(1);
+    MappingFE mapping(fe_linear);
+
+    double u_probe = 0.0;
+    try
+    {
+        u_probe = VectorTools::point_value(mapping, dof_handler, solution_ghosted, probe_point);
+    }
+    catch (...)
+    {
+        // Point not found on this process — will be reduced below.
+    }
+
+    // Only rank 0 writes the file.
+    // point_value already returns the global value on all ranks in serial,
+    // but with a distributed triangulation the call only succeeds on the
+    // owning process.  We reduce with MPI_SUM (only one process has the
+    // non-zero value).
+    double global_u_probe = 0.0;
+    MPI_Reduce(&u_probe, &global_u_probe, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (mpi_rank == 0)
+    {
+        if (!point_probe_log_file.is_open())
+        {
+            point_probe_log_file.open(output_folder + "probe.csv");
+            if (point_probe_log_file.is_open())
+                point_probe_log_file << "timestep,time,u_probe" << std::endl;
+        }
+
+        if (point_probe_log_file.is_open())
+            point_probe_log_file << timestep_number << "," << time << ","
+                                 << std::scientific << std::setprecision(10)
+                                 << global_u_probe << std::endl;
     }
 }
 

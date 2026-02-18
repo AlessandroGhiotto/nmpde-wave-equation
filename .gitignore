@@ -19,6 +19,13 @@
 # PAPERS
 **/references/*
 
+# RESULTS
+**/dissdisp-energy-series/*
+**/dissdisp-error-series/*
+**/dissdisp-logs/*
+**/dissdisp-probe-series/*
+**/dissipation-dispersion/*
+
 # personal notes
 use-cluster.md
 # ------------------------------

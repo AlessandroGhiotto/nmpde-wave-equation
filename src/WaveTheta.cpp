@@ -389,6 +389,7 @@ void WaveTheta::run()
         {
             compute_and_log_energy();
             compute_and_log_error();
+            log_point_probe();
             log_iterations(current_iterations_u, current_iterations_v);
         }
 
@@ -431,5 +432,7 @@ void WaveTheta::run()
             convergence_file.close();
         if (iterations_log_file.is_open())
             iterations_log_file.close();
+        if (point_probe_log_file.is_open())
+            point_probe_log_file.close();
     }
 }

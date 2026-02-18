@@ -73,6 +73,7 @@ class WaveEquationBase
 
     void prepare_output_filename(const std::string& method_params);
     void compute_and_log_energy();
+    void log_point_probe();
     void log_iterations(const unsigned int n_iterations_1, const unsigned int n_iterations_2);
     void compute_and_log_error();
     void compute_final_errors();
@@ -98,6 +99,7 @@ class WaveEquationBase
     std::ofstream error_log_file;
     std::ofstream convergence_file;
     std::ofstream iterations_log_file;
+    std::ofstream point_probe_log_file;
 
     // Mesh parameters
     std::pair<unsigned int, unsigned int> N_el;

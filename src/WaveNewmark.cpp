@@ -434,6 +434,7 @@ void WaveNewmark::run()
         {
             compute_and_log_energy();
             compute_and_log_error();
+            log_point_probe();
             log_iterations(current_iterations, 0);
         }
 
@@ -472,6 +473,8 @@ void WaveNewmark::run()
             convergence_file.close();
         if (iterations_log_file.is_open())
             iterations_log_file.close();
+        if (point_probe_log_file.is_open())
+            point_probe_log_file.close();
     }
 
     // stacked->report(std::cout, Teuchos::DefaultComm<int>::getComm());
