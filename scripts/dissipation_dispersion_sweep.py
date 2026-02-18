@@ -65,15 +65,23 @@ parser.add_argument(
 parser.add_argument(
     "--nel",
     type=int,
-    default=160,
-    help="Elements per side (fixed, fine enough to isolate temporal error)",
+    default=80,
+    help="Elements per side for implicit schemes (fine enough to isolate temporal error)",
+)
+parser.add_argument(
+    "--nel-explicit",
+    type=int,
+    default=80,
+    help="Elements per side for explicit (conditionally stable) schemes "
+    "(default: 80; smaller mesh relaxes the CFL constraint, "
+    "ensuring stable results for theta=0 and Newmark CD)",
 )
 parser.add_argument("--r", type=int, default=1, help="FE polynomial degree")
 parser.add_argument(
     "--dt",
     type=float,
     nargs="+",
-    default=[0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005],
+    default=[0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0001],
 )
 parser.add_argument(
     "--T", type=float, default=5.0, help="Final time (long enough for several periods)"
@@ -365,25 +373,29 @@ def main():
     logs_dir.mkdir(parents=True, exist_ok=True)
 
     nel = args.nel
+    nel_explicit = args.nel_explicit
     r_val = args.r
 
-    # Build the run plan
+    # Build the run plan — explicit schemes use a coarser mesh to relax the CFL constraint,
+    # ensuring theta=0 and Newmark CD produce stable (non-diverging) results.
     plan = []
     for scheme_name in args.schemes:
+        nel_for_scheme = nel_explicit if SCHEME_DEFS[scheme_name]["explicit"] else nel
         for dt in sorted(args.dt, reverse=True):
-            if is_cfl_safe(scheme_name, nel, r_val, dt):
-                plan.append((scheme_name, dt))
+            if is_cfl_safe(scheme_name, nel_for_scheme, r_val, dt):
+                plan.append((scheme_name, dt, nel_for_scheme))
             else:
-                cfl = cfl_limit(nel, r_val)
+                cfl = cfl_limit(nel_for_scheme, r_val)
                 print(f"  [SKIP] {scheme_name} dt={dt} exceeds CFL limit {cfl:.6f}")
 
     total = len(plan)
     print(f"\n{'='*60}")
     print(f"Dissipation/Dispersion sweep: {total} runs")
     print(f"  Schemes: {args.schemes}")
-    print(f"  Nel:     {nel}")
-    print(f"  R:       {r_val}")
-    print(f"  dt:      {args.dt}")
+    print(f"  Nel (implicit): {nel}")
+    print(f"  Nel (explicit): {nel_explicit}  (theta=0, Newmark CD)")
+    print(f"  R:              {r_val}")
+    print(f"  dt:             {args.dt}")
     print(f"  T:       {args.T}")
     print(f"  nprocs:  {args.nprocs}")
     print(f"  timeout: {args.timeout}s per run")
@@ -403,22 +415,32 @@ def main():
         with tempfile.TemporaryDirectory() as tmpdir:
             param_file = Path(tmpdir) / f"{PARAM_STEM}.json"
 
-            for i, (scheme_name, dt) in enumerate(plan, 1):
+            for i, (scheme_name, dt, nel_for_scheme) in enumerate(plan, 1):
                 sdef = SCHEME_DEFS[scheme_name]
-                cfl = cfl_limit(nel, r_val) if sdef["explicit"] else float("inf")
+                cfl = (
+                    cfl_limit(nel_for_scheme, r_val)
+                    if sdef["explicit"]
+                    else float("inf")
+                )
 
-                tag = f"{scheme_name}_Nel{nel}_R{r_val}_dt{dt}"
+                tag = f"{scheme_name}_Nel{nel_for_scheme}_R{r_val}_dt{dt}"
                 print(
                     f"[{i}/{total}] {tag}"
                     + (f"  (CFL={cfl:.6f})" if sdef["explicit"] else "")
                 )
 
                 write_param_file(
-                    base, nel, r_val, dt, args.T, sdef["overrides"], param_file
+                    base,
+                    nel_for_scheme,
+                    r_val,
+                    dt,
+                    args.T,
+                    sdef["overrides"],
+                    param_file,
                 )
 
                 code, elapsed = run_single(
-                    sdef["binary"], param_file, tag, logs_dir, nel
+                    sdef["binary"], param_file, tag, logs_dir, nel_for_scheme
                 )
                 status = (
                     "OK"
@@ -431,7 +453,9 @@ def main():
                 results_base = Path("../results")
                 prefix = "theta" if "theta" in scheme_name else "newmark"
                 problem_name = f"{prefix}-{PARAM_STEM}"
-                run_folder = predict_run_folder(nel, r_val, dt, args.T, scheme_name)
+                run_folder = predict_run_folder(
+                    nel_for_scheme, r_val, dt, args.T, scheme_name
+                )
 
                 metrics = {}
                 if code == 0:
@@ -445,7 +469,7 @@ def main():
                         )
 
                 logf.write(
-                    f"{scheme_name},{nel},{r_val},{dt},{args.T},{code},{elapsed:.3f},{cfl:.8f},"
+                    f"{scheme_name},{nel_for_scheme},{r_val},{dt},{args.T},{code},{elapsed:.3f},{cfl:.8f},"
                     f"{metrics.get('energy_ratio', '')},{metrics.get('energy_decay_rate', '')},"
                     f"{metrics.get('max_rel_L2', '')},{metrics.get('final_rel_L2_error', '')},"
                     f"{metrics.get('final_rel_H1_error', '')}\n"
@@ -455,7 +479,7 @@ def main():
                 all_metrics.append(
                     {
                         "scheme": scheme_name,
-                        "nel": nel,
+                        "nel": nel_for_scheme,
                         "r": r_val,
                         "dt": dt,
                         "T": args.T,

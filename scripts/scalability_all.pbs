@@ -58,7 +58,7 @@ for NP in 1 2 4 8 16; do
     mpirun -np "$NP" --bind-to core --map-by socket --report-bindings hostname 2>&1 | head -20
     echo "---------------------------------------------"
     echo "============================================="
-    python3 -u scalability_single.py \
+    python3 -u scalability_sweep.py \
         --nprocs "$NP" \
         --repeats "$REPEATS" \
         --use-pbs-nodefile \
@@ -77,7 +77,7 @@ NP=32
 mpirun -np "$NP" --bind-to core --map-by socket --oversubscribe --report-bindings hostname 2>&1 | head -40
 if [ $? -eq 0 ]; then
     echo "32-core binding succeeded, running benchmark..."
-    python3 -u scalability_single.py \
+    python3 -u scalability_sweep.py \
         --nprocs "$NP" \
         --repeats "$REPEATS" \
         --use-pbs-nodefile \
