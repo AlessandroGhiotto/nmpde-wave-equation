@@ -1,0 +1,84 @@
+#!/bin/bash
+#PBS -N dissdisp_sweep
+#PBS -q cpu
+#PBS -l select=1:ncpus=16:mpiprocs=16
+#PBS -l walltime=48:00:00
+#PBS -j oe
+#PBS -o dissdisp_sweep.out
+
+# ============================================================
+# Dissipation & dispersion sweep PBS job
+#
+# Submit:
+#   qsub dissipation_dispersion_all.pbs
+#   qsub -v TARGET_HOST=cpu04 dissipation_dispersion_all.pbs
+# ============================================================
+
+SOURCE_DIR="$PBS_O_WORKDIR"
+PROJECT_ROOT="$SOURCE_DIR/.."
+
+SCRATCH_ROOT="/scratch_local/nmpde-dissdisp_${PBS_JOBID}"
+WORK_DIR="$SCRATCH_ROOT/scripts"
+DEST_DIR="/home/u11177200/nmpde-wave-equation/dissdisp-results"
+
+exec > "${SOURCE_DIR}/dissdisp_sweep.log" 2>&1
+
+export OMP_NUM_THREADS=1
+export PYTHONUNBUFFERED=1
+
+JOB_TAG="$(hostname)_${PBS_JOBID%%.*}"
+export JOB_TAG
+
+echo "============================================="
+echo "Dissipation/dispersion sweep started on $(date)"
+echo "Node: $(hostname)"
+echo "JOB_TAG: $JOB_TAG"
+echo "PBS_NODEFILE contents:"
+cat "$PBS_NODEFILE"
+echo "============================================="
+
+# Copy project to scratch
+rm -rf "$SCRATCH_ROOT"
+mkdir -p "$SCRATCH_ROOT"
+
+echo "Copying project to scratch..."
+cp -r "$PROJECT_ROOT/scripts"    "$SCRATCH_ROOT/"
+cp -r "$PROJECT_ROOT/parameters" "$SCRATCH_ROOT/"
+cp -r "$PROJECT_ROOT/build"      "$SCRATCH_ROOT/"
+
+cd "$WORK_DIR" || exit 1
+
+# ============================================================
+# Run the dissipation/dispersion sweep
+# ============================================================
+# 16 MPI processes, 600s timeout per run, all 5 schemes
+# nel=160 (fine mesh to isolate temporal error), T=5.0
+python3 -u dissipation_dispersion_sweep.py \
+    --nprocs 16 \
+    --use-pbs-nodefile \
+    --job-id "$JOB_TAG" \
+    --timeout 600
+
+echo ""
+echo "============================================="
+echo "Copying results back..."
+echo "============================================="
+
+# Copy results
+mkdir -p "$DEST_DIR"
+cp -f dissdisp-results*.csv   "$DEST_DIR/" 2>/dev/null || true
+cp -f dissdisp-runlog*.csv    "$DEST_DIR/" 2>/dev/null || true
+
+# Copy time-series directories
+cp -rf dissdisp-energy-series* "$DEST_DIR/" 2>/dev/null || true
+cp -rf dissdisp-error-series*  "$DEST_DIR/" 2>/dev/null || true
+cp -rf dissdisp-probe-series*  "$DEST_DIR/" 2>/dev/null || true
+
+# Copy logs (compressed)
+tar czf "$DEST_DIR/dissdisp-logs-${JOB_TAG}.tar.gz" dissdisp-logs/ 2>/dev/null || true
+
+echo ""
+echo "============================================="
+echo "Dissipation/dispersion sweep finished on $(date)"
+echo "Results in: $DEST_DIR"
+echo "============================================="
