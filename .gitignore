@@ -26,6 +26,9 @@
 **/dissdisp-probe-series/*
 **/dissipation-dispersion/*
 
+# OLD VERSIO SCALABILITY
+**/scaling_old/*
+
 # personal notes
 use-cluster.md
 # ------------------------------
