@@ -71,9 +71,9 @@ parser.add_argument(
 parser.add_argument(
     "--nel-explicit",
     type=int,
-    default=80,
+    default=60,
     help="Elements per side for explicit (conditionally stable) schemes "
-    "(default: 80; smaller mesh relaxes the CFL constraint, "
+    "(default: 60; smaller mesh relaxes the CFL constraint, "
     "ensuring stable results for theta=0 and Newmark CD)",
 )
 parser.add_argument("--r", type=int, default=1, help="FE polynomial degree")
@@ -81,7 +81,7 @@ parser.add_argument(
     "--dt",
     type=float,
     nargs="+",
-    default=[0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0001],
+    default=[0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0001, 0.00005],
 )
 parser.add_argument(
     "--T", type=float, default=5.0, help="Final time (long enough for several periods)"
