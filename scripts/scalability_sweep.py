@@ -1,3 +1,25 @@
+#!/usr/bin/env python3
+"""
+Scalability test for the wave-equation solver.
+
+Uses the standing-mode test case  u(x,y,t) = cos(sqrt(2)*pi*t)*sin(pi*x)*sin(pi*y)
+on [0,1]^2 with zero forcing/BCs.
+
+We fix:
+ - NEL = 640
+ - R = 1
+ - DT = 0.00008
+ - T_VALUE = 0.05
+A big number of elements is nice for a scalability test (big portion of parallel code)
+but also we need a small DT for having a non divergent result for the explicit methods
+
+Usage (local):
+    python3 dissipation_dispersion_sweep.py --nprocs 4
+
+Usage (cluster):
+    refere to dissipation_dispersion_all.pbs
+"""
+
 import argparse
 import json
 import subprocess
@@ -124,7 +146,6 @@ def _build_mpi_cmd(binary: Path, param_file: Path) -> list[str]:
     # --map-by socket: distributes ranks round-robin across NUMA sockets,
     #   so p=2 gets 1 rank per socket instead of both on socket 0.
     # --bind-to core: pins each rank to a single physical core.
-    # Applied to ALL runs including p=1 for a fair comparison.
     if args.bind_to_core:
         cmd += ["--bind-to", "core", "--map-by", "socket"]
 
@@ -155,11 +176,11 @@ def main():
     base = load_base(BASE_PARAM)
 
     schemes = [
-        # Theta method: θ=0 (Forward Euler), θ=0.5 (Crank-Nicolson), θ=1 (Backward Euler)
+        # Theta method: theta=0 (FE), theta=0.5 (CN), theta=1 (BE)
         ("theta-0.0", BINARY_THETA, {"Theta": "0.0"}),
         ("theta-0.5", BINARY_THETA, {"Theta": "0.5"}),
         ("theta-1.0", BINARY_THETA, {"Theta": "1.0"}),
-        # Newmark: β=0 (explicit), β=0.25 (implicit), both γ=0.5
+        # Newmark: beta=0 (explicit, CT), beta=0.25 (implicit, AA), both gamma=0.5
         ("newmark-0.00", BINARY_NEWMARK, {"Beta": "0.0", "Gamma": "0.5"}),
         ("newmark-0.25", BINARY_NEWMARK, {"Beta": "0.25", "Gamma": "0.5"}),
     ]

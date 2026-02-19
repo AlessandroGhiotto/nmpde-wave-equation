@@ -10,6 +10,7 @@
 # ============================================================
 # Convergence sweep PBS job
 #
+# Requires the compiled cpp files in the build folder
 # Submit (from '/scripts'):
 #   qsub convergence_all.pbs
 # ============================================================

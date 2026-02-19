@@ -2,10 +2,21 @@
 #PBS -N scaling_final
 #PBS -q cpu
 ## :host=cpu04 <- add what is free
+## IT IS IMPORTANT TO HAVE A FREE NODE
+## since bandwidth is shared, if other jobs run on the same socket we are going to get bad results
 #PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu04
 #PBS -l walltime=48:00:00
 #PBS -j oe
 #PBS -o scaling_final.out
+
+# ============================================================
+# scalability job PBS
+#
+# Requires the compiled cpp files in the build folder
+# Submit (from '/scripts'):
+#   qsub scalability_all.pbs
+# ============================================================
+
 
 SOURCE_DIR="$PBS_O_WORKDIR"
 PROJECT_ROOT="$SOURCE_DIR/.."
@@ -43,8 +54,7 @@ cp -r "$PROJECT_ROOT/build"      "$SCRATCH_ROOT/"
 cd "$WORK_DIR" || exit 1
 
 # Run all processor counts sequentially on the same node.
-# This guarantees identical hardware conditions for a fair comparison.
-# Use multiple repeats so we can take the minimum.
+# Use multiple repeats (we are going to take the minimum).
 REPEATS=3
 
 # Guaranteed runs (within our 16-CPU allocation)

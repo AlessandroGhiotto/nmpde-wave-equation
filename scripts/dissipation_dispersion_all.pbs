@@ -10,6 +10,7 @@
 # ============================================================
 # Dissipation & dispersion sweep PBS job
 #
+# Requires the compiled cpp files in the build folder
 # Submit (from '/scripts'):
 #   qsub dissipation_dispersion_all.pbs
 # ============================================================

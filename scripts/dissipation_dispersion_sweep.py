@@ -8,17 +8,17 @@ on [0,1]^2 with zero forcing/BCs.  The exact solution has:
     alpha_exact = 0            (zero damping)
     E(t) = const               (energy conservation)
 
-We fix a fine spatial mesh (to isolate temporal error) and sweep over dt
-for each scheme.  The C++ binary logs energy.csv (every step) so we can
-measure:
-    - Dissipation  via  E(T)/E(0)
-    - Dispersion   via  relative L2 error growth pattern
+We fix Nel and and sweep over dt
+for each scheme.  The C++ binary for every step logs:
+- energy
+- error
+- u(0.5, 0.5, t)
 
 Usage (local):
     python3 dissipation_dispersion_sweep.py --nprocs 4
 
 Usage (cluster):
-    python3 dissipation_dispersion_sweep.py --nprocs 4 --use-pbs-nodefile
+    refere to dissipation_dispersion_all.pbs
 """
 
 import argparse
@@ -155,6 +155,7 @@ SCHEME_DEFS = {
 # ============================================================
 # CFL logic  (same as convergence_sweep.py)
 # ============================================================
+# just a quick filter to don't execute what surely will diverge
 def cfl_limit(nel: int, r: int, c: float = 1.0) -> float:
     h = 1.0 / nel
     p_factor = 1.0 if r == 1 else 4.0
@@ -180,10 +181,9 @@ def write_param_file(
 ):
     """Write a parameter JSON for one dissipation/dispersion run.
 
-    Key differences from convergence sweep:
-      - Save Solution = False  (no VTU output, save disk space)
-      - Enable Logging = True  (we need energy + error CSV)
-      - Log Every = 1          (log every single timestep for max resolution)
+    - Save Solution = False  (no VTU output)
+    - Enable Logging = True  (we need energy + error CSV)
+    - Log Every = 1          (log every single timestep)
     """
     params = dict(base)
     params["Nel"] = str(nel)
@@ -378,6 +378,7 @@ def main():
 
     # Build the run plan — explicit schemes use a coarser mesh to relax the CFL constraint,
     # ensuring theta=0 and Newmark CD produce stable (non-diverging) results.
+    # ... at the end kept everything the same just for consistency since solution don't degraged too much
     plan = []
     for scheme_name in args.schemes:
         nel_for_scheme = nel_explicit if SCHEME_DEFS[scheme_name]["explicit"] else nel
@@ -503,7 +504,7 @@ def main():
             )
 
     # Also save the per-run energy time-series as individual CSVs
-    # (for detailed time-domain analysis in the notebook)
+    ## WHAT IS USED IN THE NOTEBOOK
     energy_dir = Path(f"dissdisp-energy-series{job_suffix}")
     energy_dir.mkdir(parents=True, exist_ok=True)
     for m in all_metrics:

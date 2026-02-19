@@ -8,8 +8,8 @@ explicit methods, and collects the convergence CSV produced by the C++ binary.
 Usage (local):
     python3 convergence_sweep.py --nprocs 4
 
-Usage (cluster, called from PBS script):
-    python3 convergence_sweep.py --nprocs 4 --use-pbs-nodefile --job-id "$JOB_TAG"
+Usage (cluster):
+    refere to convergence_all.pbs
 """
 
 import argparse
@@ -140,9 +140,7 @@ def cfl_limit(nel: int, r: int, c: float = 1.0) -> float:
     """
     Conservative CFL limit for explicit time integration on a 2D simplex mesh.
 
-    For FE_SimplexP<r> on a structured triangular mesh with edge length h = 1/Nel:
-      - P1: dt_cfl ~ h / sqrt(2)
-      - P2: spectral radius of M^{-1}K is ~4x larger -> dt_cfl ~ h / (4*sqrt(2))
+    For FE_SimplexP<r> on a structured triangular mesh with edge length h = 1/Nel
     """
     h = 1.0 / nel
     p_factor = 1.0 if r == 1 else 4.0
@@ -268,9 +266,7 @@ def main():
                     if is_cfl_safe(scheme_name, nel, r, dt):
                         plan.append((scheme_name, nel, r, dt))
                     else:
-                        # All smaller dt would also be skipped? No — larger dt are skipped.
-                        # But we're iterating from largest to smallest, so break is wrong.
-                        pass  # just skip this dt
+                        pass
 
     total = len(plan)
     print(f"\n{'='*60}")
