@@ -2,10 +2,26 @@
 
 Parallel finite-element solver for the 2-D scalar wave equation
 
-$$\partial_{tt} u - c^2 \Delta u = f \qquad \text{in } \Omega \times (0,T]$$
+$$
+\left\{
+\begin{array}{lll}
+\displaystyle \frac{\partial^2 u}{\partial t^2} - c^2 \Delta u = f
+& \text{in } \Omega \times [0,T]
+& {} \\[10pt]
+u(x,t) = g
+& \text{on } \partial\Omega \times [0,T]
+& \text{(Dirichlet B.C.)} \\[10pt]
+u(x,0) = u_0(x)
+& \text{in } \Omega
+& \text{(initial displacement)} \\[10pt]
+\displaystyle \frac{\partial u}{\partial t}(x,0) = v_0(x)
+& \text{in } \Omega
+& \text{(initial velocity)}
+\end{array}
+\right.
+$$
 
-on a rectangular domain with simplicial (triangular) elements, built on top of
-[deal.II](https://www.dealii.org/) with Trilinos linear algebra and MPI
+on a rectangular domain with simplicial (triangular) elements, built using [deal.II](https://www.dealii.org/) with Trilinos linear algebra and MPI
 parallelism.
 
 Two time-integration families are implemented:
@@ -210,6 +226,8 @@ Three PBS job scripts are provided in `scripts/`:
 | `dissipation_dispersion_all.pbs` | `dissipation_dispersion_sweep.py` with 16 MPI processes    |
 | `scalability_all.pbs`            | `scalability_sweep.py` for p = 1, 2, 4, 8, 16 (sequential) |
 
+You should check to change the directories used in the scripts before submitting the job, and put your desired one (i.e change the 'codice persona').
+
 ### Submitting a job
 
 ```bash
@@ -221,7 +239,7 @@ qsub convergence_all.pbs
 
 1. **Copy the project to `scratch_local`** — the `scripts/`, `parameters/`
    and `build/` directories are copied to `/scratch_local/nmpde-<name>_${PBS_JOBID}/`.
-   All computation happens on this node-local SSD to avoid NFS contention and
+   All computation happens on this fast node-local temporary storage and
    get much better I/O performance for the many small files produced by the sweeps.
 2. **Run the Python sweep script** from the scratch directory with `--use-pbs-nodefile`
    and `--bind-to-core` binding MPI processes to cores, not to threads
@@ -230,7 +248,7 @@ qsub convergence_all.pbs
 
 Other notes:
 
-- `OMP_NUM_THREADS=1` is set to prevent accidental OpenMP oversubscription.
+- `OMP_NUM_THREADS=1` is set to prevent OpenMP oversubscription.
 - For scalability tests, select a free node, so that memory bandwidth is not shared with other jobs.
 - Core binding is enabled via `--bind-to core --map-by socket`.
 
@@ -238,8 +256,7 @@ Other notes:
 
 ## Analysis notebooks
 
-The `analysis/` folder contains Jupyter notebooks that read the CSVs produced
-by the sweep scripts and generate the figures for the report.
+The `analysis/` folder contains Jupyter notebooks that read the CSVs produced by the sweep scripts.
 
 | Notebook                                | Content                                                                                                                        |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -247,8 +264,13 @@ by the sweep scripts and generate the figures for the report.
 | `dissipation-dispersion-analysis.ipynb` | Energy ratio $E(T)/E(0)$ vs. $\Delta t$ (dissipation) and point-probe time series vs. exact solution (dispersion).             |
 | `scalability-analisys.ipynb`            | Strong-scaling plots: wall time, speedup and parallel efficiency vs. number of MPI processes. Includes Amdahl's law fit.       |
 
-The notebooks expect the CSV data in `analysis/data/` (or `analysis/data_new/`).
-Generated figures are saved to `analysis/figures/`.
+The notebooks expect the CSV data in `analysis/data/`.
+
+---
+
+## Acknowledgments
+
+We would like to thank Prof. [Michele Bucelli](https://github.com/michelebucelli) for helping us during the project.
 
 ---
 
