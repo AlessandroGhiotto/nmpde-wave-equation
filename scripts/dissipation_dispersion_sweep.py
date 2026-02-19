@@ -65,7 +65,7 @@ parser.add_argument(
 parser.add_argument(
     "--nel",
     type=int,
-    default=80,
+    default=60,
     help="Elements per side for implicit schemes (fine enough to isolate temporal error)",
 )
 parser.add_argument(
@@ -81,7 +81,7 @@ parser.add_argument(
     "--dt",
     type=float,
     nargs="+",
-    default=[0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002],
+    default=[0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0001],
 )
 parser.add_argument(
     "--T", type=float, default=5.0, help="Final time (long enough for several periods)"

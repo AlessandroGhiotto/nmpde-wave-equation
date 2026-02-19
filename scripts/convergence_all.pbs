@@ -1,6 +1,7 @@
 #!/bin/bash
 #PBS -N conv_sweep
 #PBS -q cpu
+## :host=cpu04 <- add what is free
 #PBS -l select=1:ncpus=16:mpiprocs=16
 #PBS -l walltime=48:00:00
 #PBS -j oe
@@ -9,9 +10,8 @@
 # ============================================================
 # Convergence sweep PBS job
 #
-# Submit:
+# Submit (from '/scripts'):
 #   qsub convergence_all.pbs
-#   qsub -v TARGET_HOST=cpu04 convergence_all.pbs
 # ============================================================
 
 SOURCE_DIR="$PBS_O_WORKDIR"
@@ -51,7 +51,6 @@ cd "$WORK_DIR" || exit 1
 # ============================================================
 # Run the convergence sweep
 # ============================================================
-# 16 MPI processes, 600s timeout per run, all 5 schemes, full grid
 python3 -u convergence_sweep.py \
     --nprocs 16 \
     --use-pbs-nodefile \

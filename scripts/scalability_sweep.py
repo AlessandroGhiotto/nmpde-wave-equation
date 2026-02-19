@@ -54,7 +54,7 @@ args = parser.parse_args()
 NPROCS = args.nprocs
 
 # ----------------------------
-# Configuration (robust paths)
+# Configuration
 # ----------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -63,8 +63,8 @@ BASE_PARAM = (PROJECT_ROOT / "parameters" / "standing-mode-wsol.json").resolve()
 
 NEL = "640"
 R = "1"
-DT = "0.0008"
-T_VALUE = "0.5"
+DT = "0.00008"
+T_VALUE = "0.05"
 
 BINARY_THETA = (PROJECT_ROOT / "build" / "main-theta").resolve()
 BINARY_NEWMARK = (PROJECT_ROOT / "build" / "main-newmark").resolve()

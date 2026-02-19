@@ -2,7 +2,7 @@
 #PBS -N scaling_final
 #PBS -q cpu
 ## :host=cpu04 <- add what is free
-#PBS -l select=1:ncpus=16:mpiprocs=16
+#PBS -l select=1:ncpus=16:mpiprocs=16:host=cpu04
 #PBS -l walltime=48:00:00
 #PBS -j oe
 #PBS -o scaling_final.out
@@ -21,7 +21,6 @@ export OMP_NUM_THREADS=1
 export PYTHONUNBUFFERED=1
 
 # Unique tag: hostname + short PBS job id (e.g. cpu04_12345)
-# Allows launching on two nodes simultaneously without filename collisions.
 JOB_TAG="$(hostname)_${PBS_JOBID%%.*}"
 export JOB_TAG
 
@@ -43,9 +42,9 @@ cp -r "$PROJECT_ROOT/build"      "$SCRATCH_ROOT/"
 
 cd "$WORK_DIR" || exit 1
 
-# Run all processor counts sequentially on the SAME node.
+# Run all processor counts sequentially on the same node.
 # This guarantees identical hardware conditions for a fair comparison.
-# Use multiple repeats so we can take the minimum (filters out contention).
+# Use multiple repeats so we can take the minimum.
 REPEATS=3
 
 # Guaranteed runs (within our 16-CPU allocation)
@@ -85,7 +84,7 @@ if [ $? -eq 0 ]; then
         --job-id "$JOB_TAG"
     echo "Finished nprocs=$NP at $(date)"
 else
-    echo "32-core run failed (node likely busy). Skipping."
+    echo "32-core run failed."
 fi
 
 # Merge all per-nprocs CSVs into one
