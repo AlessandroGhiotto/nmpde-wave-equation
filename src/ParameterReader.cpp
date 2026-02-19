@@ -1,6 +1,33 @@
+/**
+ * @file ParameterReader.cpp
+ * @brief Implementation of the ParameterReader class and helper parsing utilities.
+ *
+ * Handles declaration, parsing and loading of simulation parameters and
+ * function expressions from JSON / PRM files.  Two free-standing helpers
+ * (parse_value_with_pi, parse_constants_with_pi_and_multiplication) support
+ * the use of symbolic "pi" constants inside parameter files.
+ */
+
 #include "ParameterReader.hpp"
 
+/**
+ * @brief Parse a numeric string that may contain the symbol "pi".
+ *
+ * Recognised forms: @c "pi", @c "3.0*pi", or a plain numeric literal.
+ *
+ * @param value  The string to parse.
+ * @return Numeric value.
+ */
 double parse_value_with_pi(std::string value);
+
+/**
+ * @brief Parse a comma-separated "key=value" constant list.
+ *
+ * Values may use the "pi" symbol (see parse_value_with_pi()).
+ *
+ * @param s  The raw constant string from the parameter file.
+ * @return Map of constant names to numeric values.
+ */
 std::map<std::string, double>
 parse_constants_with_pi_and_multiplication(const std::string& s);
 
@@ -202,9 +229,11 @@ std::pair<unsigned int, unsigned int> ParameterReader::get_nel() const
     }
 }
 
-// ----------------------------
+// =========================================================================
 // Helper functions for parsing function constants
-// ----------------------------
+// =========================================================================
+
+/// @copydoc parse_value_with_pi
 double parse_value_with_pi(std::string value)
 {
     // trim

@@ -1,3 +1,21 @@
+/**
+ * @file main-newmark.cpp
+ * @brief Entry point for the Newmark wave-equation solver.
+ *
+ * Parses a parameter file (JSON or PRM), initialises the function data
+ * (wave speed, forcing, initial / boundary conditions, optional exact
+ * solution) via ParameterReader, constructs a WaveNewmark instance and
+ * runs the simulation.  MPI is initialised and finalised automatically
+ * through deal.II's MPI_InitFinalize helper.
+ *
+ * @par Usage
+ * @code
+ *   mpirun -np <N>  ./main-newmark  [path/to/parameters.json]
+ * @endcode
+ * If no parameter file is given the default @c ../parameters/sine-membrane.json
+ * is used.
+ */
+
 #include "ParameterReader.hpp"
 #include "WaveNewmark.hpp"
 #include <cstdlib>

@@ -1,9 +1,24 @@
+/**
+ * @file WaveEquationBase.cpp
+ * @brief Implementation of the WaveEquationBase common infrastructure.
+ *
+ * Contains mesh creation, FE setup, DoF distribution, energy / error
+ * computation, logging helpers, VTU output and the clean_double utility.
+ */
+
 #include "WaveEquationBase.hpp"
 #include <cstdlib> // getenv
 #include <mpi.h>
 
+/// @cond INTERNAL
 namespace
 {
+/**
+ * @brief Read a boolean flag from an environment variable.
+ * @param name          Name of the environment variable.
+ * @param default_value Value returned when the variable is unset.
+ * @return Parsed boolean value.
+ */
 bool env_flag_enabled(const char* name, const bool default_value)
 {
     const char* v = std::getenv(name);
@@ -17,6 +32,7 @@ bool env_flag_enabled(const char* name, const bool default_value)
     return default_value;
 }
 } // namespace
+/// @endcond
 
 void WaveEquationBase::setup_mesh()
 {

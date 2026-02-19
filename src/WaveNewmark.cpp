@@ -1,3 +1,12 @@
+/**
+ * @file WaveNewmark.cpp
+ * @brief Implementation of the WaveNewmark solver.
+ *
+ * Contains the setup, matrix assembly, right-hand side assembly,
+ * linear solve for the acceleration, Newmark update and the main
+ * time-stepping loop including consistent initial-acceleration computation.
+ */
+
 #include "WaveNewmark.hpp"
 
 void WaveNewmark::setup()

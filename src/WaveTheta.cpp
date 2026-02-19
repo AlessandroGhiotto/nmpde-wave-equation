@@ -1,3 +1,12 @@
+/**
+ * @file WaveTheta.cpp
+ * @brief Implementation of the WaveTheta solver.
+ *
+ * Contains the setup, matrix assembly, right-hand side assembly for
+ * both displacement and velocity systems, the two linear solves and
+ * the main time-stepping loop.
+ */
+
 #include "WaveTheta.hpp"
 
 void WaveTheta::setup()
