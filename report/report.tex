@@ -33,16 +33,16 @@
 This project presents the development, implementation, and performance analysis of a  numerical solver for the second-order wave equation. The solver is built upon the \textbf{deal.II} finite element library and utilizes \textbf{Trilinos} wrappers for distributed linear algebra and parallel computing. The computational domain is discretized using simplicial meshes imported from \textbf{GMSH} or generated internally, supporting various polynomial degrees $r$ for the finite element space.
 
 \vspace{0.3cm}
-\noindent We investigate two main families of time-integration schemes: the \textbf{$\theta$-methods} (e.g  Forward Euler, Crank-Nicolson, and Backward Euler) and the \textbf{Newmark-beta} family . A rigorous numerical analysis is performed, focusing on:
+\noindent We investigate two main families of time-integration schemes: the \textbf{$\theta$-methods} (e.g., Forward Euler, Crank-Nicolson, and Backward Euler) and the \textbf{Newmark-beta} family. A rigorous numerical analysis is performed, focusing on:
 
 \begin{enumerate}
-    \item \textbf{Convergence Analysis}: Evaluation of relative $L^2$ and $H^1$ errors across multiple spatial and temporal resolutions to verify theoretical accuracy rates .
-    \item \textbf{Dissipation and Dispersion}: Study of energy conservation properties and phase errors introduced by the discrete approximation .
-    \item \textbf{Scalability}: Performance benchmarks conducted on the \textbf{Politecnico di Milano HPC cluster} , evaluating parallel speedup and efficiency.
+    \item \textbf{Convergence Analysis}: Evaluation of relative $L^2$ and $H^1$ errors across multiple spatial and temporal resolutions to verify theoretical accuracy rates.
+    \item \textbf{Dissipation and Dispersion}: Study of energy conservation properties and phase errors introduced by the discrete approximation.
+    \item \textbf{Scalability}: Performance benchmarks conducted on the \textbf{Politecnico di Milano HPC cluster}, evaluating parallel speedup and efficiency.
 \end{enumerate}
 
 \vspace{0.3cm}
-\noindent The results provide a comprehensive characterization of the solver's reliability and efficiency, demonstrating its suitability for large-scale dynamic wave propagation simulations .
+\noindent The results provide a comprehensive characterization of the solver's reliability and efficiency, demonstrating its suitability for large-scale dynamic wave propagation simulations.
 }
 
 
