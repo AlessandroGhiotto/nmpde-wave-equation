@@ -1,35 +1,40 @@
 # Wave Equation — FEM Solver (deal.II)
 
-Parallel finite-element solver for the 2-D scalar wave equation
+Parallel finite-element solver for the 2D scalar wave equation
 
 $$
-\left\{
+\left\lbrace
 \begin{array}{lll}
 \displaystyle \frac{\partial^2 u}{\partial t^2} - c^2 \Delta u = f
 & \text{in } \Omega \times [0,T]
-& {} \\[10pt]
+& {} \\\\[10pt]
 u(x,t) = g
 & \text{on } \partial\Omega \times [0,T]
-& \text{(Dirichlet B.C.)} \\[10pt]
+& \text{(Dirichlet B.C.)} \\\\[10pt]
 u(x,0) = u_0(x)
 & \text{in } \Omega
-& \text{(initial displacement)} \\[10pt]
+& \text{(Initial Displacement)} \\\\[10pt]
 \displaystyle \frac{\partial u}{\partial t}(x,0) = v_0(x)
 & \text{in } \Omega
-& \text{(initial velocity)}
+& \text{(Initial Velocity)}
 \end{array}
 \right.
 $$
 
-on a rectangular domain with simplicial (triangular) elements, built using [deal.II](https://www.dealii.org/) with Trilinos linear algebra and MPI
+on a rectangular domain $\Omega$ with simplicial (triangular) elements, built using [deal.II](https://www.dealii.org/), exploiting Trilinos and MPI
 parallelism.
 
-Two time-integration families are implemented:
 
-| Method              | Parameters         | Key property                                                                                  |
-| ------------------- | ------------------ | --------------------------------------------------------------------------------------------- |
-| **Theta-method**    | $\theta \in [0,1]$ | $\theta=0$ explicit FE, $\theta=\tfrac12$ Crank–Nicolson, $\theta=1$ implicit BE              |
-| **Newmark-$\beta$** | $\gamma,\;\beta$   | $\beta=0$ explicit central differences, $\beta=\tfrac14,\gamma=\tfrac12$ average acceleration |
+## Implemented Time-Integration Families
+
+<div align="center">
+  
+| Method              | Parameters         | Key properties                                                                                |
+| :------------------- | :------------------: | :--------------------------------------------------------------------------------------------- |
+| **Theta-method**    | $\theta \in [0,1]$ | $\theta=0$ → Forward Euler (FE) <br/> $\theta=\tfrac12$ → Crank–Nicolson (CN) <br/> $\theta=1$ →  Backward Euler (BE)              |
+| **Newmark-$\beta$** | $\gamma,\beta$   | $\beta=0$ → Central Difference method <br/>$\beta=\tfrac14, \gamma=\tfrac12$ → Middle Point rule |
+
+</div>
 
 ---
 
@@ -66,7 +71,7 @@ nmpde-wave-equation/
 - C++17 compiler with MPI support
 - [deal.II](https://www.dealii.org/) ≥ 9.3.1 (with Trilinos enabled)
 
-The Apptainer container used was provided by Paolo Joseph Baioni for the "Advanced Methods for Scientific Computing" course, you can get it by running:
+You can get the Apptainer containter used in the project by executing the following commands on a terminal window
 
 ```bash
 mkdir -p $HOME/apptainer-tmp/
@@ -76,10 +81,10 @@ export APPTAINER_CACHEDIR=$HOME/apptainer-cache/
 apptainer pull docker://quay.io/pjbaioni/amsc_mk:2025
 ```
 
-Load the container and the needed modules:
+and afterwards load the container and the needed modules
 
 ```bash
-apptainer shell /path/to/amsc_mk_2025.sif   # if using the container
+apptainer shell /path/to/amsc_mk_2025.sif
 source /u/sw/etc/bash.bashrc
 module load gcc-glibc dealii
 ```
@@ -99,7 +104,7 @@ This produces two executables: `main-theta` and `main-newmark`.
 
 ## Running a simulation
 
-Both executables take a single argument — the path to a JSON parameter file:
+Both executables take a single command-line argument i.e. the path to a `JSON` parameter file.
 
 ```bash
 cd build
@@ -111,45 +116,44 @@ If no argument is given, the default `../parameters/sine-membrane.json` is used.
 
 ### Parameter file format
 
-A JSON file with scalar entries and function subsections:
+A `JSON` parameter file with scalar entries and function subsections
 
 ```jsonc
 {
-  "Geometry": "[0.0, 1.0] x [0.0, 1.0]",   // domain bounding box
-  "Nel": "80",                               // elements per side (or "80, 60" for rectangular)
-  "R": "1",                                  // polynomial degree
-  "T": "1.0",                                // final time
-  "Theta": "0.5",                            // theta parameter (theta-method only)
-  "Beta": "0.25",                            // beta  parameter (Newmark only)
-  "Gamma": "0.5",                            // gamma parameter (Newmark only)
-  "Dt": "0.005",                             // time step
-  "Save Solution": true,                     // write VTU output
-  "Enable Logging": true,                    // write energy/error CSVs
-  "Log Every": 10,                           // log frequency (0 = off)
-  "Print Every": 10,                         // console output frequency
+  "Geometry": "[0.0, 1.0] x [0.0, 1.0]",             // domain bounding box
+  "Nel": "80",                                       // elements per side (or "80, 60" for rectangular)
+  "R": "1",                                          // polynomial degree
+  "T": "1.0",                                        // final time
+  "Theta": "0.5",                                    // theta parameter (theta-method only)
+  "Beta": "0.25",                                    // beta  parameter (Newmark only)
+  "Gamma": "0.5",                                    // gamma parameter (Newmark only)
+  "Dt": "0.005",                                     // time step
+  "Save Solution": true,                             // write VTU output
+  "Enable Logging": true,                            // write energy/error CSVs
+  "Log Every": 10,                                   // log frequency (0 = off)
+  "Print Every": 10,                                 // console output frequency
   "C":  { "Function expression": "1.0", ... },       // wave speed c(x,y,t)
   "F":  { "Function expression": "0.0", ... },       // forcing f(x,y,t)
   "U0": { "Function expression": "sin(pi*x)*sin(pi*y)", ... },  // initial displacement
   "V0": { "Function expression": "0.0", ... },       // initial velocity
   "G":  { "Function expression": "0.0", ... },       // Dirichlet BC for u
   "DGDT": { "Function expression": "0.0", ... },     // time-derivative of g
-  "Solution": { "Function expression": "...", ... }   // exact solution (optional)
+  "Solution": { "Function expression": "...", ... }  // exact solution (optional)
 }
 ```
 
-Several ready-made parameter files are provided in `parameters/` (standing mode
-with exact solution, Gaussian pulse, Ricker wavelet, oscillating boundary, …).
+Several already available parameter files are provided in `parameters/` (e.g. Gaussian pulse, Ricker wavelet, ...).
 
 ### Output
 
-Results are written to `results/<problem_name>/run-R...-N...-dt.../`:
+The results of the simulation are written to the following folder `/results/<problem_name>/run-R...-N...-dt.../`:
 
-- `solution_*.vtu` / `solution_*.pvtu` — displacement, velocity (and exact solution if available) for ParaView
-- `energy.csv` — discrete energy time series
-- `error.csv` — L2 and H1 error vs. exact solution (if provided)
-- `probe.csv` — point probe at the domain centre
-- `iterations.csv` — CG iteration counts
-- `convergence.csv` — one-line summary appended across runs (for convergence studies)
+- `solution_*.vtu` or `solution_*.pvtu` → displacement, velocity, and eventually the exact solution, ideal for being imported in ParaView
+- `energy.csv` → discrete energy time series
+- `error.csv` → L2 and H1 error and comparison w.r.t the exact solution, if available
+- `probe.csv` → point probe at the domain centre
+- `iterations.csv` → Conjugate Gradient (CG) method iteration counts
+- `convergence.csv` → execution summary appended from different runs
 
 ---
 
@@ -192,11 +196,11 @@ objects (supporting symbolic `pi` constants).
 All scripts live in `scripts/` and drive parametric studies by repeatedly
 invoking the C++ executables with different parameter combinations.
 
-| Script                            | Purpose                                                                                                                                                   |
+| Python script                            | Purpose                                                                                                                                                   |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `convergence_sweep.py`            | Sweep over `(scheme, Nel, R, dt)` to study spatial and temporal convergence. Applies CFL filtering for explicit methods.                                  |
-| `dissipation_dispersion_sweep.py` | Fix the mesh, sweep over `dt` for each scheme. Logs energy, error and point-probe at every step to analyse numerical dissipation and dispersion.          |
-| `scalability_sweep.py`            | Fix discretisation, measure wall-clock time for a given number of MPI processes. Run multiple times with different `--nprocs` for a strong-scaling study. |
+| `convergence_sweep.py`            | Sweep over `(scheme, Nel, R, dt)` to study spatial and temporal convergence, applying also Courant-Friedrichs-Lewy (CFL) filtering for explicit methods.                                  |
+| `dissipation_dispersion_sweep.py` | Fix the mesh, sweep over `dt` for each scheme, logging energy values, errors and point-probing at each step to analyse numerical dissipation and dispersion.          |
+| `scalability_sweep.py`            | Fix discretisation, measure the wall-clock time for a given number of MPI processes. |
 
 ### Common CLI flags
 
@@ -216,17 +220,17 @@ Each script produces CSV result files that are later read by the analysis notebo
 
 ---
 
-## Running on the cluster (PBS)
+## Running on the cluster with the PBS scheduler
 
 Three PBS job scripts are provided in `scripts/`:
 
-| PBS file                         | What it runs                                               |
+| PBS script                         | What it runs                                              |
 | -------------------------------- | ---------------------------------------------------------- |
 | `convergence_all.pbs`            | `convergence_sweep.py` with 16 MPI processes               |
 | `dissipation_dispersion_all.pbs` | `dissipation_dispersion_sweep.py` with 16 MPI processes    |
 | `scalability_all.pbs`            | `scalability_sweep.py` for p = 1, 2, 4, 8, 16 (sequential) |
 
-You should check to change the directories used in the scripts before submitting the job, and put your desired one (i.e change the 'codice persona').
+You should be sure to change the directories used in the scripts before submitting the job, and put your desired one.
 
 ### Submitting a job
 
@@ -256,7 +260,7 @@ Other notes:
 
 ## Analysis notebooks
 
-The `analysis/` folder contains Jupyter notebooks that read the CSVs produced by the sweep scripts.
+The `analysis/` folder contains Jupyter notebooks that read the `.csv` files produced by the Python scripts.
 
 | Notebook                                | Content                                                                                                                        |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -264,16 +268,12 @@ The `analysis/` folder contains Jupyter notebooks that read the CSVs produced by
 | `dissipation-dispersion-analysis.ipynb` | Energy ratio $E(T)/E(0)$ vs. $\Delta t$ (dissipation) and point-probe time series vs. exact solution (dispersion).             |
 | `scalability-analisys.ipynb`            | Strong-scaling plots: wall time, speedup and parallel efficiency vs. number of MPI processes. Includes Amdahl's law fit.       |
 
-The notebooks expect the CSV data in `analysis/data/`.
+All the notebooks expect the `.csv` data to be placed in the folder `analysis/data/`.
 
 ---
 
 ## Acknowledgments
 
-We would like to thank Prof. [Michele Bucelli](https://github.com/michelebucelli) for helping us during the project.
+We would like to thank Prof. [Michele Bucelli](https://github.com/michelebucelli) for its valuable advices during the execution of the project.
 
 ---
-
-## License
-
-MIT — see [LICENSE](LICENSE).
