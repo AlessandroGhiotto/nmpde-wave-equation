@@ -1,0 +1,65 @@
+\section{Scalability Analysis}
+\label{sec:scalability}
+
+A good numerical solver must not only be accurate but also able to exploit modern parallel hardware.  In this section we assess the \textbf{strong scaling} behaviour of the MPI-parallel wave equation solver for all five time-integration schemes.
+
+\subsection{Experimental Setup}
+
+\paragraph{Test problem.}
+We solve the standing-mode problem \eqref{eq:standing_mode} on the unit square with $N_{\mathrm{el}} = 640$ elements per side, polynomial degree $r = 1$, time step $\Delta t = 8 \times 10^{-5}$, and final time $T = 0.05$ (625 time steps).  The mesh is large enough (over $400\,000$ degrees of freedom) to let parallelism pay off, and $\Delta t$ is small enough to keep the explicit schemes within their CFL bound.  Solution output and CSV logging are disabled so that only computation time is measured.
+
+\paragraph{Hardware.}
+All tests were executed on the Students Cluster of the Mathematics Department at Politecnico di Milano.  Each node is equipped with two \textbf{Intel Xeon Gold 6238R} processors (28 physical cores per socket, 38.5\,MB L3 cache each) for a total of 56 physical cores per node.
+
+\paragraph{MPI configuration.}
+We use \textbf{OpenMPI} with \texttt{--bind-to core --map-by socket} binding and set \texttt{OMP\_NUM\_THREADS=1} to prevent hyper-threading.  Each PBS job requests 16 CPUs on a \emph{single node}; the process counts $p \in \{1, 2, 4, 8, 16\}$ are swept sequentially within the same job.
+
+\paragraph{Methodology.}
+For each $({\mathrm{scheme}},\, p)$ configuration we perform 3~repeat runs and retain the \emph{minimum} wall time as the representative measurement. The code is copied and executed on \texttt{/scratch\_local}, which is fast node-local temporary storage.  The sweep is automated by the Python script \texttt{scalability\_sweep.py}.
+
+\subsection{Metrics}
+
+Given the wall time $T(p)$ for $p$ MPI processes, we define:
+\begin{itemize}
+    \item \textbf{Speedup}: $S(p) = T(1) / T(p)$,
+    \item \textbf{Parallel efficiency}: $E(p) = S(p) / p$.
+\end{itemize}
+Ideal (linear) scaling corresponds to $S(p) = p$ and $E(p) = 1$.
+
+\subsection{Results}
+
+\Cref{fig:scalability} shows wall time, speedup, and parallel efficiency as a function of the number of MPI processes for all five schemes.  \Cref{tab:scalability_summary} reports the numerical values at $p = 16$.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/scalability_strong_scaling.png}
+    \caption{Strong scaling results. \emph{Left:} wall time (log scale) vs.\ number of MPI processes.  \emph{Centre:} speedup $S(p) = T(1)/T(p)$ with the ideal-scaling reference (dashed).  \emph{Right:} parallel efficiency $E(p) = S(p)/p$.}
+    \label{fig:scalability}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrrrrr}
+    \textbf{Scheme} & $T(1)$ [s] & $T(16)$ [s] & $S(16)$ & $E(16)$ \\
+    \hline
+    FE ($\theta = 0$)           & 668.5 & 58.0 & 11.52 & 0.72 \\
+    CN ($\theta = 0.5$)         & 624.9 & 55.0 & 11.37 & 0.71 \\
+    BE ($\theta = 1$)           & 624.9 & 54.6 & 11.44 & 0.72 \\
+    Newmark ($\beta = 0$)             & 330.2 & 31.3 & 10.53 & 0.66 \\
+    Newmark ($\beta = 0.25$)          & 296.3 & 27.6 & 10.75 & 0.67 \\
+\end{tabular}
+\caption{Strong scaling summary at $p = 16$ MPI processes.  $T(1)$ and $T(16)$ are the best wall times (minimum over 3 repeats).}
+\label{tab:scalability_summary}
+\end{table}
+
+The main observations are:
+
+\begin{itemize}
+    \item \textbf{All schemes scale well} up to 16 cores, with speedups between $10.5\times$ and $11.5\times$ and parallel efficiencies of $66$--$72\%$.  The departure from ideal scaling is expected at this process count due to MPI communication overhead and the serial fraction of setup/assembly.
+
+    \item \textbf{The three $\theta$-methods are consistently clustered together} in wall time ($\sim\!625$--$669\,\mathrm{s}$ serial, $\sim\!55$--$58\,\mathrm{s}$ at $p=16$).  This is because each $\theta$-method time step requires solving \emph{two} symmetric positive-definite (SPD) linear systems (one for $\mathbf{U}^{n+1}$ and one for $\mathbf{V}^{n+1}$), and the cost of these solves dominates. 
+
+    \item \textbf{The Newmark family is roughly twice as fast} as the $\theta$-methods ($\sim\!296$--$330\,\mathrm{s}$ serial), since each Newmark step requires only \emph{one} linear solve (for the acceleration $\mathbf{a}^{n+1}$), followed by explicit algebraic updates for $\mathbf{U}^{n+1}$ and $\mathbf{V}^{n+1}$.
+
+    \item \textbf{Newmark schemes show slightly lower parallel efficiency} ($\sim\!66$--$67\%$ vs.\ $\sim\!71$--$72\%$ for the $\theta$-methods).  With fewer total floating-point operations per time step, the non-parallelisable overhead (MPI synchronisation, preconditioner setup, vector scatter/gather) is larger, reducing the parallel fraction of the computations.
+\end{itemize}

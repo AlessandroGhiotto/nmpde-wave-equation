@@ -1,0 +1,99 @@
+\section{Numerical Dissipation and Dispersion}
+\label{sec:dissdisp}
+
+Even when a time-stepping scheme is stable and convergent, it can still introduce two distinct artefacts that degrade the quality of long-time wave simulations:
+\begin{itemize}
+    \item \textbf{Numerical dissipation}: unphysical decay of the wave amplitude, manifesting as an energy loss that is absent in the continuous problem.
+    \item \textbf{Numerical dispersion}: a frequency-dependent phase-velocity error that causes the numerical solution to drift out of phase with the exact one.
+\end{itemize}
+While the convergence study of \Cref{sec:convergence} quantifies the global error at a fixed final time, it does not distinguish between these two mechanisms. In this section we design a dedicated experiment to isolate and visualise both effects for all five schemes.
+
+\subsection{Test Problem and Sweep Setup}
+
+We reuse the standing-mode problem \eqref{eq:standing_mode} on $\Omega = [0,1]^2$ with the exact solution
+\begin{equation}
+    u_{\mathrm{exact}}(\mathbf{x}, t)
+    = \cos\!\bigl(\sqrt{2}\,\pi\, t\bigr)\,\sin(\pi x)\,\sin(\pi y),
+    \qquad
+    \omega_{\mathrm{exact}} = \sqrt{2}\,\pi,
+\end{equation}
+but now we extend the simulation to $T = 5\,\mathrm{s}$ (roughly $3.5$ full oscillation periods) in order to let phase and amplitude errors accumulate.
+
+The spatial mesh is fixed at $N_{\mathrm{el}} = 60$ elements per side with polynomial degree $r = 1$, so that computations needed for each timesteps are not too expensive.  All five schemes are run with the same set of eleven time steps:
+
+\begin{center}
+\begin{tabular}{ll}
+    \textbf{Parameter} & \textbf{Values} \\
+    \hline
+    $\Delta t$ & $1.5 {\times} 10^{-1}$, $10^{-1}$, $5 {\times} 10^{-2}$, ... , $10^{-3}$, $5 {\times} 10^{-4}$, $10^{-4}$, $5 {\times} 10^{-5}$ \\
+\end{tabular}
+\end{center}
+
+\noindent For the two conditionally stable schemes (Forward Euler and explicit Newmark), the CFL condition is enforced and runs that violate it are automatically. The sweep is driven by the Python script \texttt{dissipation\_dispersion\_sweep.py}, which logs at every time step both the discrete energy and the numerical solution at the domain centre.
+
+\subsection{Dissipation — Energy Evolution}
+
+The discrete energy associated with the finite-element semi-discretization is
+\begin{equation}
+    \label{eq:disc_energy}
+    E^n = \frac{1}{2}\bigl(\mathbf{V}^{n\,T} \mathbf{M}\, \mathbf{V}^n
+          + \mathbf{U}^{n\,T} \mathbf{A}\, \mathbf{U}^n\bigr),
+\end{equation}
+where $\mathbf{M}$ and $\mathbf{A}$ are the mass and stiffness matrices, respectively. For the continuous problem with homogeneous Dirichlet conditions and zero forcing, the energy is exactly conserved, so $E(t)/E(0) = 1$ if there is no numerical dissipation $E(t)/E(0) < 1$ if nergy decays.
+
+\Cref{fig:dissdisp_energy} shows the normalised energy $E(t)/E(0)$ as a function of time for each scheme and several values of $\Delta t$.  The following behaviour is observed:
+\begin{itemize}
+    \item \textbf{Crank--Nicolson} ($\theta = 0.5$) and \textbf{Newmark Average Acceleration} ($\beta = 0.25,\; \gamma = 0.5$) preserve the discrete energy to machine precision for all tested $\Delta t$, confirming their energy-conserving character.
+    \item \textbf{Backward Euler} ($\theta = 1$) exhibits strong dissipation: the energy decays monotonically and the decay rate increases with $\Delta t$. For $\Delta t = 0.15$ the energy is almost entirely dissipated within the simulation window.
+    \item \textbf{Forward Euler} ($\theta = 0$) and \textbf{explicit Newmark} ($\beta = 0$) are conditionally stable. For $\Delta t$ values that satisfy the CFL condition the energy is preserved, while for larger $\Delta t$ the energy grows without bound and the simulation diverges.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/dissdisp_energy_evolution.png}
+    \caption{Normalised energy $E(t)/E(0)$ vs.\ time for each scheme. Each coloured line corresponds to a different $\Delta t$.  Energy-conserving schemes ($\theta = 0.5$, Newmark $\beta = 0.25$) lie exactly on the dashed reference line $E/E_0 = 1$; Backward Euler shows progressive energy loss; explicit methods are either perfectly conservative (CFL satisfied) or diverge.}
+    \label{fig:dissdisp_energy}
+\end{figure}
+
+\subsection{Dispersion — Point-Probe Comparison}
+
+To visualise dispersion we compare the numerical solution at the domain centre with the exact solution. Because $\sin(\pi / 2) = 1$, the exact trace at $(0.5, 0.5)$ reduces to a pure cosine:
+\begin{equation}
+    u_{\mathrm{exact}}(0.5,\, 0.5,\, t) = \cos\!\bigl(\sqrt{2}\,\pi\, t\bigr).
+\end{equation}
+A dispersive scheme produces a cosine with a slightly perturbed frequency $\tilde\omega \neq \omega_{\mathrm{exact}}$, so the numerical and exact curves gradually drift out of phase.  A dissipative scheme additionally shows amplitude decay.
+
+\Cref{fig:dissdisp_probe} overlays the numerical and exact traces for each scheme.  The main observations are:
+\begin{itemize}
+    \item \textbf{Forward Euler} and \textbf{explicit Newmark}: for $\Delta t$ values within the CFL, bound the numerical solution overlaps with the exact cosine, consistent with the absence of both dissipation and dispersion. Larger $\Delta t$ values lead to immediate divergence.
+    \item \textbf{Crank--Nicolson} and \textbf{Newmark Average Acceleration}: the amplitude is perfectly preserved (no dissipation), but a clear phase shift develops for larger values of $\Delta t$. For example, at $\Delta t = 0.1$ a visible lag accumulates by $t \approx 3\,\mathrm{s}$, while for $\Delta t = 0.15$ the numerical wave is significantly out of phase by the end of the simulation. For sufficiently small $\Delta t$ the dispersion error becomes negligible.
+    \item \textbf{Backward Euler}: both amplitude decay and phase drift are evident. The numerical oscillation rapidly damps out for moderate $\Delta t$, rendering the solution qualitatively incorrect within a few periods. This confirms that Backward Euler is unsuitable for long-time wave propagation unless extremely small time steps are employed.
+\end{itemize}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/dissdisp_probe_vs_exact.png}
+    \caption{Numerical solution $u_h(0.5,\,0.5,\,t)$ (coloured lines) vs.\ exact solution $\cos(\sqrt{2}\,\pi\, t)$ (dashed black) at the domain centre. Each sub-panel corresponds to a different scheme; colours encode $\Delta t$. Phase drift signals dispersion; amplitude decay signals dissipation.}
+    \label{fig:dissdisp_probe}
+\end{figure}
+
+% \subsection{Summary of Findings}
+
+% \Cref{tab:dissdisp_summary} collects the qualitative dissipation and dispersion properties observed in the numerical experiments, confirming the theoretical predictions.
+
+% \begin{table}[ht]
+% \centering
+% \begin{tabular}{lccc}
+%     \textbf{Scheme} & \textbf{Dissipation} & \textbf{Dispersion} & \textbf{Stability} \\
+%     \hline
+%     $\theta$-FE ($\theta = 0$)           & None   & None   & Conditional \\
+%     $\theta$-CN ($\theta = 0.5$)         & None   & Yes    & Unconditional \\
+%     $\theta$-BE ($\theta = 1$)           & Strong & Yes    & Unconditional \\
+%     Newmark CD ($\beta = 0,\;\gamma = 0.5$)     & None   & None   & Conditional \\
+%     Newmark AA ($\beta = 0.25,\;\gamma = 0.5$)  & None   & Yes    & Unconditional \\
+% \end{tabular}
+% \caption{Summary of numerical dissipation and dispersion for each scheme. ``None'' indicates the property was not observed within the tested $\Delta t$ range (CFL-compliant runs only for explicit schemes).}
+% \label{tab:dissdisp_summary}
+% \end{table}
+
+% \noindent The results highlight a fundamental trade-off: the two unconditionally stable and energy-conserving schemes (Crank--Nicolson and Newmark Average Acceleration) introduce dispersion for large $\Delta t$ but no dissipation, while the conditionally stable explicit schemes are free from both artefacts within their CFL limit. Backward Euler, despite being unconditionally stable, suffers from severe dissipation that makes it impractical for wave propagation unless the time step is taken very small.
