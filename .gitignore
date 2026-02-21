@@ -29,6 +29,9 @@
 # OLD VERSIO SCALABILITY
 **/scaling_old/*
 
+# pdf
+/report/report.pdf
+
 # personal notes
 use-cluster.md
 # ------------------------------
