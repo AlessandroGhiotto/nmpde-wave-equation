@@ -1,4 +1,11 @@
 \section{Conclusions}
-\color{black}
-A final section containing the main conclusions of your research/study
-and possible future developments of your work have to be inserted in the section ``Conclusions''.
+
+We developed an MPI-parallel finite-element solver for the wave equation based on deal.II and Trilinos, and compared five time-integration schemes from two families: the $\theta$-method (Forward Euler, Crank--Nicolson, Backward Euler) and the Newmark-$\beta$ family (explicit central-difference and implicit average-acceleration).
+
+The convergence study confirmed the expected rates: first-order in time for Forward and Backward Euler, second-order for Crank--Nicolson and both Newmark variants, together with optimal spatial rates $\mathcal{O}(h^{r+1})$ in the $L^2$ norm and $\mathcal{O}(h^r)$ in the $H^1$ norm.
+
+The dissipation and dispersion analysis revealed a clear trade-off among the schemes. The conditionally stable explicit methods (Forward Euler and explicit Newmark) are free from both artefacts within their CFL limit, but require small time steps. Crank--Nicolson and implicit Newmark are unconditionally stable and energy-conserving, yet they introduce dispersion for large $\Delta t$. Backward Euler, while unconditionally stable, suffers from severe amplitude damping that makes it unsuitable for long-time wave propagation unless $\Delta t$ is taken very small.
+
+From a computational standpoint, the Newmark schemes are roughly twice as fast as the $\theta$-methods because each time step requires only one linear solve instead of two. All five schemes exhibit good strong scaling up to 16 MPI processes, with parallel efficiencies between 66\% and 72\%.
+
+Overall, implicit Newmark ($\beta = 1/4$, $\gamma = 1/2$) offers the best balance of accuracy, energy conservation, unconditional stability, and computational cost among the methods considered.

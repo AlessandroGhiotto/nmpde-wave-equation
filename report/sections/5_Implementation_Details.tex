@@ -28,7 +28,7 @@ The abstract class \texttt{WaveEquationBase} provides the functionalities shared
     
     \item \textbf{Global matrices.} The mass matrix $\mathbf{M}$ and the stiffness matrix $\mathbf{A}$ (weighted by the wave speed $c^2$) are assembled once at startup, since both are time-independent. Assembly is performed in parallel, each MPI process computes local element contributions and inserts them into \texttt{TrilinosWrappers::SparseMatrix} objects, which handle the distributed storage and communication.
     
-    \item \textbf{Diagnostics and logging.} At user-specified intervals the base class computes the discrete energy $E^n = \tfrac{1}{2}\bigl(\mathbf{V}^T \mathbf{M}\, \mathbf{V} + \mathbf{U}^T \mathbf{A}\, \mathbf{U}\bigr)$, evaluates $L^2$ and $H^1$ errors against an exact solution (when available), records a point probe at the domain centre, and logs CG iteration counts. All diagnostic data are written to CSV files for post-processing.
+    \item \textbf{Diagnostics and logging.} At user-specified intervals the base class computes the discrete energy $E^n = \tfrac{1}{2}\bigl(\mathbf{v}^T \mathbf{M}\, \mathbf{v} + \mathbf{u}^T \mathbf{A}\, \mathbf{u}\bigr)$, evaluates $L^2$ and $H^1$ errors against an exact solution (when available), records a point probe at the domain centre, and logs CG iteration counts. All diagnostic data are written to CSV files for post-processing.
     
     \item \textbf{Solution output.} Displacement and velocity fields are exported in VTU/PVTU format at configurable intervals, enabling visualization in ParaView.
     
@@ -41,11 +41,11 @@ The class exposes a single pure-virtual method \texttt{run()} that derived class
 
 \subsubsection{Theta-Method Solver}
 
-The class \texttt{WaveTheta} inherits from \texttt{WaveEquationBase} and implements the $\theta$-method described in Section~\ref{subsec:theta_method}. At each time step it solves \emph{two} SPD systems sequentially, one for the displacement $\mathbf{U}^{n+1}$ and one for the velocity $\mathbf{V}^{n+1}$, enforcing Dirichlet conditions $\phi(t^{n+1})$ and $\partial_t \phi(t^{n+1})$ respectively. Both solves use Conjugate Gradient with an AMG preconditioner.
+The class \texttt{WaveTheta} inherits from \texttt{WaveEquationBase} and implements the $\theta$-method described in Section~\ref{subsec:theta_method}. At each time step it solves \emph{two} SPD systems sequentially, one for the displacement $\mathbf{u}^{n+1}$ and one for the velocity $\mathbf{v}^{n+1}$, enforcing Dirichlet conditions $\phi(t^{n+1})$ and $\partial_t \phi(t^{n+1})$ respectively. Both solves use Conjugate Gradient with an AMG preconditioner.
 
 \subsubsection{Newmark Solver}
 
-The class \texttt{WaveNewmark} inherits from \texttt{WaveEquationBase} and implements the Newmark-$\beta$ family described in Section~\ref{subsec:newmark}. It introduces the discrete acceleration $\mathbf{a}^n$ as an additional unknown, a consistent $\mathbf{a}^0$ is computed at startup by solving $\mathbf{M}\,\mathbf{a}^0 = \mathbf{G}(0) - \mathbf{A}\,\mathbf{U}^0$. At each subsequent step only \emph{one} SPD system is solved for $\mathbf{a}^{n+1}$, after which $\mathbf{U}^{n+1}$ and $\mathbf{V}^{n+1}$ are updated algebraically. The same CG~+~AMG solver strategy is used.
+The class \texttt{WaveNewmark} inherits from \texttt{WaveEquationBase} and implements the Newmark-$\beta$ family described in Section~\ref{subsec:newmark}. It introduces the discrete acceleration $\mathbf{a}^n$ as an additional unknown, a consistent $\mathbf{a}^0$ is computed at startup by solving $\mathbf{M}\,\mathbf{a}^0 = \mathbf{G}(0) - \mathbf{A}\,\mathbf{u}^0$. At each subsequent step only \emph{one} SPD system is solved for $\mathbf{a}^{n+1}$, after which $\mathbf{u}^{n+1}$ and $\mathbf{v}^{n+1}$ are updated algebraically. The same CG~+~AMG solver strategy is used.
 
 \subsubsection{Parameter Reader}
 

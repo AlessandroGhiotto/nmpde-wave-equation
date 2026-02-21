@@ -57,9 +57,9 @@ The main observations are:
 \begin{itemize}
     \item \textbf{All schemes scale well} up to 16 cores, with speedups between $10.5\times$ and $11.5\times$ and parallel efficiencies of $66$--$72\%$.  The departure from ideal scaling is expected at this process count due to MPI communication overhead and the serial fraction of setup/assembly.
 
-    \item \textbf{The three $\theta$-methods are consistently clustered together} in wall time ($\sim\!625$--$669\,\mathrm{s}$ serial, $\sim\!55$--$58\,\mathrm{s}$ at $p=16$).  This is because each $\theta$-method time step requires solving \emph{two} symmetric positive-definite (SPD) linear systems (one for $\mathbf{U}^{n+1}$ and one for $\mathbf{V}^{n+1}$), and the cost of these solves dominates. 
+    \item \textbf{The three $\theta$-methods are consistently clustered together} in wall time ($\sim\!625$--$669\,\mathrm{s}$ serial, $\sim\!55$--$58\,\mathrm{s}$ at $p=16$).  This is because each $\theta$-method time step requires solving \emph{two} symmetric positive-definite (SPD) linear systems (one for $\mathbf{u}^{n+1}$ and one for $\mathbf{v}^{n+1}$), and the cost of these solves dominates. 
 
-    \item \textbf{The Newmark family is roughly twice as fast} as the $\theta$-methods ($\sim\!296$--$330\,\mathrm{s}$ serial), since each Newmark step requires only \emph{one} linear solve (for the acceleration $\mathbf{a}^{n+1}$), followed by explicit algebraic updates for $\mathbf{U}^{n+1}$ and $\mathbf{V}^{n+1}$.
+    \item \textbf{The Newmark family is roughly twice as fast} as the $\theta$-methods ($\sim\!296$--$330\,\mathrm{s}$ serial), since each Newmark step requires only \emph{one} linear solve (for the acceleration $\mathbf{a}^{n+1}$), followed by explicit algebraic updates for $\mathbf{u}^{n+1}$ and $\mathbf{v}^{n+1}$.
 
     \item \textbf{Newmark schemes show slightly lower parallel efficiency} ($\sim\!66$--$67\%$ vs.\ $\sim\!71$--$72\%$ for the $\theta$-methods).  With fewer total floating-point operations per time step, the non-parallelisable overhead (MPI synchronisation, preconditioner setup, vector scatter/gather) is larger, reducing the parallel fraction of the computations.
 \end{itemize}

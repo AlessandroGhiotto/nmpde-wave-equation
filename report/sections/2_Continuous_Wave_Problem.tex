@@ -3,48 +3,48 @@
 \label{sec:continuous_problem}
 
 \subsection{Strong Formulation}
-The propagation of waves in a bounded domain $\Omega \subset \mathbb{R}^2$, as preannounced, is modeled by a second-order hyperbolic Partial Differential Equation \cite{salsa2015partial}. We seek the displacement field $u(\mathbf{x},t)$ that satisfies the following initial-boundary value problem:
+We consider a bounded domain $\Omega \subset \mathbb{R}^2$. The wave propagation is governed by the following second-order hyperbolic PDE \cite{salsa2015partial}: find $u(\mathbf{x},t)$ such that
 
 \begin{equation}
 \label{eq:strong_form}
 \begin{cases} 
-\frac{\partial^2 u}{\partial t^2}(\mathbf{x}, t) - \nabla \cdot (c^2 \nabla u(\mathbf{x}, t)) = f(\mathbf{x},t) & \text{in } \Omega \times (0, T] \\
+\partial_{tt} u(\mathbf{x}, t) - \nabla \cdot (c^2 \nabla u(\mathbf{x}, t)) = f(\mathbf{x},t) & \text{in } \Omega \times (0, T] \\
 u(\mathbf{x}, t) = \phi(\mathbf{x}, t) & \text{on } \partial \Omega \times [0, T] \\
 u(\mathbf{x}, 0) = u_0(\mathbf{x}) & \text{in } \Omega \\
-\frac{\partial u}{\partial t}(\mathbf{x}, 0) = v(\mathbf{x}) & \text{in } \Omega 
+\partial_t u(\mathbf{x}, 0) = v_0(\mathbf{x}) & \text{in } \Omega 
 \end{cases}
 \end{equation}
 
-In this framework, $c(\mathbf{x}, t)$ denotes the wave propagation speed, which is handled in our implementation as a space-time dependent function. The term $f$ represents the external forcing, while $u_0$ and $v$ define the initial displacement and velocity, respectively. The Dirichlet boundary condition $\phi$ constrains the solution on the boundary $\partial \Omega$ throughout the simulation interval $[0, T]$.
+Here $c(\mathbf{x}, t)$ is the wave speed (possibly depending on space and time), $f$ is an external forcing term, $u_0$ and $v_0$ are the initial displacement and velocity, and $\phi$ prescribes the Dirichlet boundary condition on $\partial \Omega$ for all $t \in [0, T]$.
 
 \subsection{Weak Formulation}
 
-To apply the Finite Element Method (FEM), we derive the variational form of the strong problem. We begin by defining the appropriate functional spaces for the solution and the test functions. The test space is defined as $V = H^1_0(\Omega) = \{v \in H^1(\Omega) : v|_{\partial\Omega} = 0\}$, which consists of functions with zero trace on the boundary. In the presence of non-homogeneous Dirichlet conditions $\phi \neq 0$, the solution $u$ belongs to the trial space $V\phi = \{v \in H^1(\Omega) : v|_{\partial\Omega} = \phi\}$.
+To apply the Finite Element Method (FEM) we need the weak formulation of the problem. We define the test space $V = H^1_0(\Omega) = \{v \in H^1(\Omega) : v|_{\partial\Omega} = 0\}$, which consists of functions wich are zero on the boundary. When the Dirichlet datum is non-homogeneous ($\phi \neq 0$), the solution $u$ lives in the space $V_\phi = \{w \in H^1(\Omega) : w|_{\partial\Omega} = \phi\}$.
 
 \vspace{0.5cm}
-To ensure compatibility with the Lax-Milgram Lemma \cite{quarteroni2008numerical}, which requires trial and test functions to belong to the same Hilbert space, we introduce a \textbf{Lifting Operator} $\mathcal{R}$. Let $u_\phi = \mathcal{R}g \in V_\phi(\Omega)$ be a function such that its trace on the boundary $\partial \Omega$ is exactly $\phi$. We decompose the global solution as:
+To ensure compatibility with the Lax-Milgram Lemma \cite{quarteroni2008numerical}, we introduce a \textbf{lifting operator} $\mathcal{R}_\phi \in V_\phi$. We then split the solution as
 \begin{equation}
-    u(\mathbf{x}, t) = u_0(\mathbf{x}, t) + u_\phi(\mathbf{x}, t)
+    u(\mathbf{x}, t) = \hat{u}(\mathbf{x}, t) + \mathcal{R}_\phi(\mathbf{x}, t)
 \end{equation}
-where $u_0 \in V$ is the new unknown function with zero trace on the boundary.
+where $\hat{u} \in V$ is the new unknown, which has homogeneous Dirichlet boundary conditions.
 
-The derivation proceeds by multiplying the strong equation by a test function $v \in V$ and integrating over the domain $\Omega$:
+We multiply the PDE by a test function $v \in V$ and integrate over $\Omega$:
 \begin{equation}
-    \int_{\Omega} \frac{\partial^2 u}{\partial t^2} v \, d\Omega - \int_{\Omega} \nabla \cdot (c^2 \nabla u) v \, d\Omega = \int_{\Omega} f v \, d\Omega \quad \forall v \in V
+    \int_{\Omega} \partial_{tt} u \; v \, d\Omega - \int_{\Omega} \nabla \cdot (c^2 \nabla u) v \, d\Omega = \int_{\Omega} f v \, d\Omega \quad \forall v \in V
 \end{equation}
-Applying Green's first identity to the second-order spatial term, we obtain:
+Applying Green's formula to the diffusion term gives
 \begin{equation}
-    \int_{\Omega} \frac{\partial^2 u}{\partial t^2} v \, d\Omega + \int_{\Omega} c^2 \nabla u \cdot \nabla v \, d\Omega - \int_{\partial \Omega} (c^2 \nabla u \cdot \mathbf{n}) v \, d\gamma = \int_{\Omega} f v \, d\Omega \quad \forall v \in V
+    \int_{\Omega} \partial_{tt} u \; v \, d\Omega + \int_{\Omega} c^2 \nabla u \cdot \nabla v \, d\Omega - \int_{\partial \Omega} (c^2 \nabla u \cdot \mathbf{n}) v \, d\gamma = \int_{\Omega} f v \, d\Omega \quad \forall v \in V
 \end{equation}
-Since $v = 0$ on $\partial \Omega$, the boundary integral vanishes. Substituting the decomposition $u = u_0 + u_\phi$ and exploiting the linearity of the operators, the semi-discrete weak formulation is expressed in the following way: 
+Because $v = 0$ on $\partial \Omega$, the boundary integral vanishes. Substituting $u = \hat{u} + \mathcal{R}_\phi$ and using linearity, we get the weak formulation: 
 
 \begin{equation}
 \label{eq:weak_problem_lifting}
 \begin{cases}
-\forall t \in (0,T), \text{ find } u_0(t) \in V \text{ such that:} \\
-\left( \frac{\partial^2 u_0}{\partial t^2}, v \right)_{L^2(\Omega)} + a(u_0, v) = G(v) \quad \forall v \in V \\
-u(x,0)=u_0(x) \\
-\frac{\partial u}{\partial t}(x,0)=u_1(x)
+\forall t \in (0,T), \text{ find } \hat{u}(t) \in V \text{ such that:} \\
+\int_{\Omega} \partial_{tt} \hat{u} \; v \, d\Omega + a(\hat{u}, v) = G(v) \quad \forall v \in V \\
+\hat{u}(\mathbf{x},0) = u_0(\mathbf{x}) - \mathcal{R}_\phi(\mathbf{x},0) \\
+\partial_t \hat{u}(\mathbf{x},0) = v_0(\mathbf{x}) - \partial_t \mathcal{R}_\phi(\mathbf{x},0)
 \end{cases}
 \end{equation}
 % with the initial conditions: 
@@ -55,16 +55,15 @@ u(x,0)=u_0(x) \\
 % \frac{\partial u}{\partial t}(x,0)=u_1(x)
 % $$
 
-The bilinear and linear forms utilized in the implementation are defined as:
+The bilinear and linear forms are defined as follows:
 \begin{itemize}
-    \item \textbf{Mass form}: $(w, v)_{L^2(\Omega)} = \int_{\Omega} w v \, d\Omega$ 
+    % \item \textbf{Mass form}: $m(w, v) = \int_{\Omega} w v \, d\Omega$ 
     % (used for assembling the mass matrix $\mathbf{M}$).
     \item \textbf{Stiffness form}:  Let $a: V\times V \rightarrow \mathbb{R}$, with $a(u, v) = \int_{\Omega} c^2 \nabla u \cdot \nabla v \, d\Omega$ 
     % (used for assembling the stiffness matrix $\mathbf{A}$).
-    \item \textbf{RHS}: Let $G: V\rightarrow \mathbb{R}$, with $G(v) = \int_{\Omega} f v \, d\Omega - \left( \frac{\partial^2 u_\phi}{\partial t^2}, v \right)_{L^2(\Omega)} - a(u_\phi, v) $, which includes the entire contribution which doesn't depends on $u$.
+    \item \textbf{RHS}: Let $G: V\rightarrow \mathbb{R}$, with $G(v) = \int_{\Omega} f v \, d\Omega - \int_{\Omega} \partial_{tt} \mathcal{R}_\phi \; v \, d\Omega - a(\mathcal{R}_\phi, v) $, which gathers all the terms that do not involve the unknown $\hat{u}$.
 \end{itemize}
 
 
-This formulation eliminates the second derivatives in space, making the problem compatible with finite $H^1$ spaces and allowing numerical discretization. Thanks to the lifting operator, we get homogeneous Dirichlet BC, so the bilinear form
-a(·, ·) remains continuous and coercive on the Hilbert space $H^1_0(\Omega)$, guaranteeing
-the existence and uniqueness of the solution \cite{evans2010partial, quarteroni2008numerical}.
+The integration by parts removes the second-order spatial derivatives, so the formulation only requires $H^1$ regularity. Because of the lifting, the unknown $\hat{u}$ satisfies homogeneous Dirichlet conditions, and the bilinear form
+$a(\cdot, \cdot)$ is continuous and coercive on $H^1_0(\Omega)$, which guarantees existence and uniqueness of the solution \cite{evans2010partial, quarteroni2008numerical}.

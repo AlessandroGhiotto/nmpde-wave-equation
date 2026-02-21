@@ -11,7 +11,7 @@
 
 % Insert here the info that will be displayed into your Title page 
 % -> title of your work
-\renewcommand{\title}{Numerical Solvers for the Second-Order Wave Equation}
+\renewcommand{\title}{Numerical Solvers for the Wave Equation}
 % -> author name and surname
 \renewcommand{\author}{Roberto Di Lauro}
 \newcommand{\authorone}{Thomas Fabbris}
@@ -39,7 +39,7 @@ This project presents the development, implementation, and performance analysis 
 \begin{enumerate}
     \item \textbf{Convergence Analysis}: Evaluation of relative $L^2$ and $H^1$ errors across multiple spatial and temporal resolutions to verify theoretical accuracy rates.
     \item \textbf{Dissipation and Dispersion}: Study of energy conservation properties and phase errors introduced by the discrete approximation.
-    \item \textbf{Scalability}: Performance benchmarks conducted on the \textbf{Politecnico di Milano HPC cluster}, evaluating parallel speedup and efficiency.
+    \item \textbf{Scalability}: Performance benchmarks conducted on the \textbf{Politecnico di Milano HPC "Students Cluster"}, evaluating parallel speedup and efficiency.
 \end{enumerate}
 
 \vspace{0.3cm}
@@ -58,6 +58,10 @@ This project presents the development, implementation, and performance analysis 
 \input{configuration-files/title-page}
 
 %-----------------------------------------------------------------------------
+% TABLE OF CONTENTS
+\newpage
+\tableofcontents
+%-----------------------------------------------------------------------------
 % INTRODUCTION
 \newpage
 %-----------------------------------------------------------------------------
@@ -70,7 +74,7 @@ This project presents the development, implementation, and performance analysis 
 \input{sections/3_Spatial_Discretization.tex}
 \vspace{1.0cm}
 \input{sections/4_Time_Discretization.tex}
-\newpage
+% \newpage
 \input{sections/5_Implementation_Details.tex}
 \input{sections/6_Convergence.tex}
 \input{sections/7_Dissipation_Dipsersion.tex}

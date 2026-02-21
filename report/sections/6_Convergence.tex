@@ -21,7 +21,7 @@ u(\mathbf{x}, 0) = \sin(\pi x)\sin(\pi y), \\
 \partial_t u(\mathbf{x}, 0) = 0,
 \end{cases}
 \end{equation}
-whose exact solution is $u_{\mathrm{exact}}(\mathbf{x},t) = \cos \!\bigl(\sqrt{2}\,\pi\, t\bigr)\,\sin(\pi x)\sin(\pi y)$. The final time is $T = 1$.
+whose exact solution is $u_{\mathrm{exact}}(\mathbf{x},t) = \cos \bigl(\sqrt{2}\,\pi\, t\bigr)\,\sin(\pi x)\sin(\pi y)$. The final time is $T = 1$.
 
 \subsection{Sweep Parameters}
 
@@ -51,7 +51,7 @@ Newmark (implicit) & $\beta = \tfrac{1}{4},\; \gamma = \tfrac{1}{2}$ & 2 & Uncon
 \end{tabular}
 \end{center}
 
-\noindent For the two conditionally stable schemes (Forward Euler and explicit Newmark), the sweep script automatically filters out $(N_{\mathrm{el}}, \Delta t)$ combinations that violate the CFL condition, using a safety factor of $0.9$. Runs that produce relative errors above $10^5$ are flagged as diverged and excluded from the analysis. The total sweep comprises 490 solver runs.
+\noindent For the two conditionally stable schemes (Forward Euler and explicit Newmark), the sweep script automatically filters out $(N_{\mathrm{el}}, \Delta t)$ combinations that violate the CFL condition. Runs that produce relative errors above $10^5$ are flagged as diverged and excluded from the analysis. The total sweep comprises 490 solver runs.
 
 \subsection{Temporal Convergence}
 

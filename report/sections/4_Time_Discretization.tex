@@ -2,77 +2,95 @@
 \section{Time Discretization}
 \label{sec:time_discretization}
 
-The spatial discretization detailed in (9) yields a semi-discrete dynamical system subject to  the initial conditions $\mathbf{U}(0) = \mathbf{U}_0$ and $\frac{\partial \mathbf{U}}{\partial t}(0) = \mathbf{V}_0$. 
+The spatial discretization detailed in \eqref{eq:semi_discrete_system} yields a semi-discrete dynamical system subject to the initial conditions $\mathbf{u}(0) = \mathbf{u}_0$ and $\partial_t \mathbf{u}(0) = \mathbf{v}_0$. 
 
-To apply standard time-marching techniques, it is common practice to recast (9) as a system of first-order ordinary differential equations \cite{quarteroni2008numerical}. We introduce the discrete velocity vector $\mathbf{V}(t) = \frac{\partial \mathbf{U}}{\partial t}(t)$, allowing us to rewrite the problem as two coupled equations:
+A standard approach \cite{quarteroni2008numerical} is to rewrite \eqref{eq:semi_discrete_system} as a first-order system by introducing the velocity vector $\mathbf{v}(t) = \partial_t \mathbf{u}(t)$:
 \begin{equation}
-\label{eq:first_order_system}
-\begin{cases}
-\frac{\partial \mathbf{U}}{\partial t}(t) - \mathbf{V}(t) = \mathbf{0} \\
-\mathbf{M}\frac{\partial \mathbf{V}}{\partial t}(t) + \mathbf{A}\mathbf{U}(t) = \mathbf{G}(t)
-\end{cases}
+    \label{eq:first_order_system}
+    \begin{cases}
+    \partial_t \mathbf{u}(t) - \mathbf{v}(t) = \mathbf{0} \\
+    \mathbf{M}\,\partial_t \mathbf{v}(t) + \mathbf{A}\mathbf{u}(t) = \mathbf{G}(t) \\
+    \mathbf{u}(0) = \mathbf{u}_0 \\
+    \mathbf{v}(0) = \mathbf{v}_0
+    \end{cases}
 \end{equation}
 
-Boundary conditions are naturally inherited by the velocity field; for a prescribed Dirichlet datum $\mathbf{U}(t) = \phi(t)$ on the boundary nodes, the corresponding velocity constraint is strictly enforced as $\mathbf{V}(t) = \frac{\partial \phi}{\partial t}(t)$. This coupled first-order system forms the basis for the $\theta$-method family, while the original second-order form (9) is utilized directly by the Newmark-$\beta$ integration scheme.
+% On the boundary nodes, if $\mathbf{u}(t) = \phi(t)$ then $\mathbf{v}(t) = \partial_t \phi(t)$. 
+The $\theta$-method is applied to this first-order system, while the Newmark-$\beta$ method works directly on the second-order form~\eqref{eq:semi_discrete_system}.
 
 \subsection{The $\theta$-Method}
 \label{subsec:theta_method}
 
-To discretize the first-order system \eqref{eq:first_order_system}, we adopt a family of implicit-explicit schemes parameterized by $\theta \in [0,1]$     \cite{quarteroni2008numerical}. Time derivatives are approximated using finite differences over a time step $\Delta t$, and the equation terms are evaluated as a convex combination of levels $t^n$ and $t^{n+1}$. The discretized system reads:
+We discretize \eqref{eq:first_order_system} with a one-parameter family of schemes controlled by $\theta \in [0,1]$ \cite{quarteroni2008numerical}. The time derivatives are replaced by finite differences over a step $\Delta t>0$, and the right-hand side terms are weighted between $t^n$ and $t^{n+1}$, where $t^k = k \Delta t$:
 
 \begin{equation}
-\label{eq:theta_u}
-\frac{\mathbf{U}^{n+1} - \mathbf{U}^n}{\Delta t} = \theta \mathbf{V}^{n+1} + (1-\theta) \mathbf{V}^n
-\end{equation}
-\begin{equation}
-\label{eq:theta_v}
-\mathbf{M} \frac{\mathbf{V}^{n+1} - \mathbf{V}^n}{\Delta t} + \mathbf{A} (\theta \mathbf{U}^{n+1} + (1-\theta) \mathbf{U}^n) = \mathbf{G}_{\theta}^{n+1}
-\end{equation}
-where $\mathbf{G}_{\theta}^{n+1} = \theta \mathbf{G}^{n+1} + (1-\theta) \mathbf{G}^n$. 
-
-By isolating $\mathbf{V}^{n+1}$ in \eqref{eq:theta_u} and substituting it into \eqref{eq:theta_v}, we obtain a single linear system for the unknown displacement $\mathbf{U}^{n+1}$:
-\begin{equation}
-\label{eq:theta_final}
-(\mathbf{M} + \theta^2 \Delta t^2 \mathbf{A}) \mathbf{U}^{n+1} = \mathbf{M}(\mathbf{U}^n + \Delta t \mathbf{V}^n) - \theta(1-\theta)\Delta t^2 \mathbf{A} \mathbf{U}^n + \theta \Delta t^2 \mathbf{G}_{\theta}^{n+1}
+    \label{eq:theta_u}
+    \frac{\mathbf{u}^{n+1} - \mathbf{u}^n}{\Delta t} = \theta\, \mathbf{v}^{n+1} + (1-\theta) \mathbf{v}^n
 \end{equation}
 
-At each time step, we solve \eqref{eq:theta_final} for $\mathbf{U}^{n+1}$. Subsequently, the velocity $\mathbf{V}^{n+1}$ is explicitly updated using \eqref{eq:theta_u}. The parameter $\theta$ dictates the properties of the scheme:
+\begin{equation}
+    \label{eq:theta_v}
+    \mathbf{M}\, \frac{\mathbf{v}^{n+1} - \mathbf{v}^n}{\Delta t} + \mathbf{A} (\theta\, \mathbf{u}^{n+1} + (1-\theta) \mathbf{u}^n) = \mathbf{G}_{\theta}^{n+1}
+\end{equation}
+
+where $\mathbf{G}_{\theta}^{n+1} = \theta\, \mathbf{G}^{n+1} + (1-\theta)\mathbf{G}^n$. 
+
+We first rearrange \eqref{eq:theta_v} to isolate $\mathbf{M}\,\mathbf{v}^{n+1}$:
+\begin{equation}
+    \label{eq:theta_v_rearranged}
+    \mathbf{M}\,\mathbf{v}^{n+1} = \mathbf{M}\,\mathbf{v}^n - \Delta t\, \mathbf{A}\bigl[\theta\, \mathbf{u}^{n+1} + (1-\theta)\, \mathbf{u}^n\bigr] + \Delta t\, \mathbf{G}_{\theta}^{n+1}
+\end{equation}
+
+Then we multiply \eqref{eq:theta_u} by $\mathbf{M}$ and substitute \eqref{eq:theta_v_rearranged} into it, obtaining a linear system for $\mathbf{u}^{n+1}$:
+
+\begin{equation}
+    \label{eq:theta_final}
+    (\mathbf{M} + \theta^2 \Delta t^2 \mathbf{A})\, \mathbf{u}^{n+1} = \mathbf{M}(\mathbf{u}^n + \Delta t\, \mathbf{v}^n) - \Delta t^2\, \theta(1-\theta) \mathbf{A}\, \mathbf{u}^n +  \Delta t^2\, \theta\, \mathbf{G}_{\theta}^{n+1}
+\end{equation}
+
+At each time step we solve \emph{two} SPD linear systems sequentially:
+\begin{enumerate}
+    \item Solve \eqref{eq:theta_final} for $\mathbf{u}^{n+1}$ (the right-hand side depends only on quantities at $t^n$).
+    \item Solve \eqref{eq:theta_v_rearranged} for $\mathbf{v}^{n+1}$ (using the just-computed $\mathbf{u}^{n+1}$).
+\end{enumerate}
+
+\noindent The value of $\theta$ determines the character of the scheme:
 \begin{itemize}
-    \item $\theta = 0$: \textbf{Forward Euler}. Fully explicit and conditionally stable.
+    \item $\theta = 0$: \textbf{Forward Euler}. Fully explicit, requires $\Delta t$ small enough for stability.
     \item $\theta = 1/2$: \textbf{Crank-Nicolson}. Implicit, second-order accurate in time, and non-dissipative.
-    \item $\theta = 1$: \textbf{Backward Euler}. Fully implicit, generally unconditionally stable, but highly dissipative.
+    \item $\theta = 1$: \textbf{Backward Euler}. Fully implicit, unconditionally stable, but highly dissipative.
 \end{itemize}
 
 
 \subsection{Newmark Time Integration}
 \label{subsec:newmark}
 
-The Newmark-$\beta$ method is a widely used time-marching scheme for second-order dynamical systems \cite{newmark1959method, hughes2012finite}. It computes the state at $t^{n+1} = t^n + \Delta t$ by introducing two parameters, $\beta$ and $\gamma$, which dictate the stability, accuracy, and numerical dissipation.
+The Newmark-$\beta$ method \cite{newmark1959method, hughes2012finite} is designed for second-order systems and advances the solution from $t^n$ to $t^{n+1} = t^n + \Delta t$ using two parameters $\beta$ and $\gamma$ that control stability, accuracy, and dissipation.
 
-The discrete displacement $\mathbf{U}$ and velocity $\mathbf{V}$ are updated using the acceleration $\mathbf{a} \approx \frac{\partial^2 \mathbf{U}}{\partial t^2}$:
+The discrete displacement $\mathbf{u}$ and velocity $\mathbf{v}$ are updated using the acceleration $\mathbf{a} \approx \partial_{tt} \mathbf{u}$:
 \begin{align}
-\label{eq:newmark_u}
-\mathbf{U}^{n+1} &= \mathbf{U}^n + \Delta t \mathbf{V}^n + \Delta t^2 \left[ \left(\frac{1}{2} - \beta\right)\mathbf{a}^n + \beta \mathbf{a}^{n+1} \right] \\
-\label{eq:newmark_v}
-\mathbf{V}^{n+1} &= \mathbf{V}^n + \Delta t \left[ (1 - \gamma)\mathbf{a}^n + \gamma \mathbf{a}^{n+1} \right]
+    \label{eq:newmark_u}
+    \mathbf{u}^{n+1} &= \mathbf{u}^n + \Delta t \mathbf{v}^n + \Delta t^2 \left[ \beta \mathbf{a}^{n+1} + \left(\frac{1}{2} - \beta\right)\mathbf{a}^n \right] \\
+    \label{eq:newmark_v}
+    \mathbf{v}^{n+1} &= \mathbf{v}^n + \Delta t \left[ \gamma \mathbf{a}^{n+1} + (1 - \gamma)\mathbf{a}^n \right]
 \end{align}
 
-To compute the unknown acceleration $\mathbf{a}^{n+1}$, we enforce dynamic equilibrium at $t^{n+1}$:
+The unknown $\mathbf{a}^{n+1}$ is found by requiring that the semi-discrete equation holds at $t^{n+1}$:
 \begin{equation}
-\mathbf{M}\mathbf{a}^{n+1} + \mathbf{A}\mathbf{U}^{n+1} = \mathbf{G}^{n+1}
+    \mathbf{M}\mathbf{a}^{n+1} + \mathbf{A}\mathbf{u}^{n+1} = \mathbf{G}^{n+1}
 \end{equation}
 
 Substituting \eqref{eq:newmark_u} into this equilibrium equation yields a linear system for $\mathbf{a}^{n+1}$:
 \begin{equation}
-\label{eq:newmark_solve}
-(\mathbf{M} + \beta \Delta t^2 \mathbf{A})\mathbf{a}^{n+1} = \mathbf{G}^{n+1} - \mathbf{A}\mathbf{U}^n - \Delta t \mathbf{A}\mathbf{V}^n - \Delta t^2 \left(\frac{1}{2} - \beta\right)\mathbf{A}\mathbf{a}^n
+    \label{eq:newmark_solve}
+    (\mathbf{M} + \Delta t^2 \beta \mathbf{A})\mathbf{a}^{n+1} = \mathbf{G}^{n+1} - \mathbf{A}\mathbf{u}^n - \Delta t \mathbf{A}\mathbf{v}^n - \Delta t^2 \left(\frac{1}{2} - \beta\right)\mathbf{A}\mathbf{a}^n
 \end{equation}
 
-At each time step, we solve \eqref{eq:newmark_solve} for $\mathbf{a}^{n+1}$, and then explicitly update $\mathbf{U}^{n+1}$ and $\mathbf{V}^{n+1}$. The method's behavior depends heavily on the chosen parameters:
+At each step we solve \eqref{eq:newmark_solve} for $\mathbf{a}^{n+1}$ and then update $\mathbf{u}^{n+1}$ and $\mathbf{v}^{n+1}$ algebraically. Notable parameter choices are:
 \begin{itemize}
     \item $\gamma = 1/2, \beta = 1/4$: \textbf{Average Acceleration Method}. Unconditionally stable and non-dissipative.
-    \item $\beta > 1/4$: Introduces numerical dissipation, useful for damping high-frequency modes.
-    \item $\gamma < 1/2$: Explicit scheme (conditionally stable).
+    \item $\gamma = 1/2, \beta = 0$: \textbf{Central Difference Method}. Explicit and conditionally stable.
+    \item $\gamma > 1/2$ (with $\beta \geq \tfrac{1}{4}(\gamma + \tfrac{1}{2})^2$): Introduces controlled numerical dissipation, useful for damping spurious high-frequency oscillations.
 \end{itemize}
 
 
