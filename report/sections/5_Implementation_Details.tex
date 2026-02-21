@@ -41,7 +41,7 @@ The class exposes a single pure-virtual method \texttt{run()} that derived class
 
 \subsubsection{Theta-Method Solver}
 
-The class \texttt{WaveTheta} inherits from \texttt{WaveEquationBase} and implements the $\theta$-method described in Section~\ref{subsec:theta_method}. At each time step it solves \emph{two} SPD systems sequentially, one for the displacement $\mathbf{U}^{n+1}$ and one for the velocity $\mathbf{V}^{n+1}$, enforcing Dirichlet conditions $g(t^{n+1})$ and $\partial_t g(t^{n+1})$ respectively. Both solves use Conjugate Gradient with an AMG preconditioner.
+The class \texttt{WaveTheta} inherits from \texttt{WaveEquationBase} and implements the $\theta$-method described in Section~\ref{subsec:theta_method}. At each time step it solves \emph{two} SPD systems sequentially, one for the displacement $\mathbf{U}^{n+1}$ and one for the velocity $\mathbf{V}^{n+1}$, enforcing Dirichlet conditions $\phi(t^{n+1})$ and $\partial_t \phi(t^{n+1})$ respectively. Both solves use Conjugate Gradient with an AMG preconditioner.
 
 \subsubsection{Newmark Solver}
 
@@ -54,7 +54,7 @@ The class \texttt{ParameterReader} wraps deal.II's \texttt{ParameterHandler} and
 \begin{itemize}
     \item \textbf{Domain and discretization}: geometry bounds (e.g.\ $[0,1]^2$), number of mesh elements per direction, and polynomial degree $r$.
     \item \textbf{Time integration}: final time $T$, time-step size $\Delta t$, and method-specific parameters ($\theta$ for the theta-method; $\gamma$ and $\beta$ for Newmark).
-    \item \textbf{Problem data}: symbolic mathematical expressions for $c(\mathbf{x})$, $f(\mathbf{x},t)$, $u_0(\mathbf{x})$, $v_0(\mathbf{x})$, $g(\mathbf{x},t)$, $\partial_t g(\mathbf{x},t)$, and optionally the exact solution.
+    \item \textbf{Problem data}: symbolic mathematical expressions for $c(\mathbf{x})$, $f(\mathbf{x},t)$, $u_0(\mathbf{x})$, $v_0(\mathbf{x})$, $\phi(\mathbf{x},t)$, $\partial_t \phi(\mathbf{x},t)$, and optionally the exact solution.
     \item \textbf{Output control}: flags for saving VTU snapshots, enabling CSV logging, and specifying the logging and printing frequency.
 \end{itemize}
 

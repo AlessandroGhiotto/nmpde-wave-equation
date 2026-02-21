@@ -30,7 +30,7 @@
 \newcommand{\COURSENAME}{Numerical Methods for Partial Differential Equations}
 % -> abstract
 \renewcommand{\abstract}{
-This project presents the development, implementation, and performance analysis of a  numerical solver for the second-order wave equation. The solver is built upon the \textbf{deal.II} finite element library and utilizes \textbf{Trilinos} wrappers for distributed linear algebra and parallel computing. The computational domain is discretized using simplicial meshes imported from \textbf{GMSH} or generated internally, supporting various polynomial degrees $r$ for the finite element space.
+This project presents the development, implementation, and performance analysis of a  numerical solver for the second-order wave equation. The solver is built upon the \textbf{deal.II} finite element library and utilizes \textbf{Trilinos} wrappers for distributed linear algebra and parallel computing. The computational domain is discretized using simplicial meshes generated internally, supporting various polynomial degrees $r$ for the finite element space.
 
 \vspace{0.3cm}
 \noindent We investigate two main families of time-integration schemes: the \textbf{$\theta$-methods} (e.g., Forward Euler, Crank-Nicolson, and Backward Euler) and the \textbf{Newmark-beta} family. A rigorous numerical analysis is performed, focusing on:
@@ -80,7 +80,7 @@ This project presents the development, implementation, and performance analysis 
 % CONCLUSION
 %-----------------------------------------------------------------------------
 \input{sections/9_conclusion.tex}
-
+\newpage
 %-----------------------------------------------------------------------------
 % BIBLIOGRAPHY
 %-----------------------------------------------------------------------------
