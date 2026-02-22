@@ -301,50 +301,52 @@
     \end{itemize}
     \end{frame}
     
-\begin{frame}{Spatial Convergence: Backward Euler ($\theta = 1$)}
+\begin{frame}{BE ($\theta = 1$): $\mathcal{O}(\Delta t)$}
     \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_theta_1_h_r1_2.png}
     
+    \includegraphics[width=0.48\textwidth]{images/conv_theta_1_dt_r1_2_L2.png}
+    \hfill
+    \includegraphics[width=0.48\textwidth]{images/conv_theta_1_h_r1_2_L2.png}
+
     \vspace{0.3cm}
+
     \begin{itemize}
-        \item \textbf{Plateau Effect:} For $r=2$, the $L^2$ error is bounded by $C(h^3 + \Delta t)$, causing an early stall in convergence.
-        \item The 1st-order temporal error dominates quickly as the mesh is refined ($h \to 0$).
+        \item \textbf{Plateau Effect:} For $r=2$, the $L^2$ error is bounded by $C(h^3 + \Delta t)$.
+        \item The 1st-order temporal error dominates as $h \to 0$.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Spatial Convergence: Crank-Nicolson ($\theta = 0.5$)}
+\begin{frame}{Implicit Newmark ($\beta=0.25$) / CN ($\theta = 0.5$): $\mathcal{O}(\Delta t^2)$}
     \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_theta_05_h_r1_2.png}
-    
+    \includegraphics[width=0.48\textwidth]{images/conv_newmark_025_dt_r1_2_L2.png}
+    \hfill
+    \includegraphics[width=0.48\textwidth]{images/conv_newmark_025_h_r1_2_L2.png} 
+
     \vspace{0.3cm}
     \begin{itemize}
-        \item \textbf{Improved Accuracy:} The error is bounded by $C(h^s + \Delta t^2)$, allowing for a wider range of visible spatial rates.
-        \item Spatial curves collapse onto each other for small $\Delta t$, indicating the pure spatial rate is correctly captured.
+        \item \textbf{Improved Accuracy:} The error is bounded by $C(h^s + \Delta t^2)$.
+        \item Now the bound imposed by $\Delta t$ improves, so the curves in the "Error vs h" are less flat.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Temporal Convergence: Backward Euler ($\theta = 1$)}
+\begin{frame}{Explicit Newmark ($\beta=0$) / FE ($\theta = 0$): conditional stability}
     \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_theta_1_dt_r1_2.png} % Esempio BE
-    
+    \includegraphics[width=0.48\textwidth]{images/conv_newmark_000_dt_r1_2_L2.png}
+    \hfill
+    \includegraphics[width=0.48\textwidth]{images/conv_newmark_000_h_r1_2_L2.png} 
+
     \vspace{0.3cm}
     \begin{itemize}
-        \item \textbf{Linear Rate:} Forward Euler ($\theta=0$) and Backward Euler ($\theta=1$) confirm the expected $\mathcal{O}(\Delta t)$ asymptotic behavior.
-        \item \textbf{Spatial Plateau:} For small $\Delta t$, the error stops decreasing as it becomes dominated by the mesh size $h$.
+        \item \textbf{CFL condition:} only configurations satisfying $\Delta t \le C \frac{h}{c}$ are stable in time.
+        \item If $\Delta t$ is too large compared to $h$, the numerical solution diverges.
+        \item This behavior is visible in the plots:
+        \begin{itemize}
+            \item In the convergence plot w.r.t $\Delta t$, data points are missing on the RHS (large $\Delta t$).
+            \item In the convergence plot w.r.t $h$, data points are missing on the LHS (small $h$).
+        \end{itemize}
     \end{itemize}
 \end{frame}
 
-
-\begin{frame}{Temporal Convergence: Cranck-Nicolson ($\theta = 0.5$)}
-    \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_theta_05_dt_r1_2.png} % Esempio CN
-    
-    \vspace{0.3cm}
-    \begin{itemize}
-        \item \textbf{Quadratic Rate:} Crank-Nicolson and Newmark variants ($\gamma=0.5$) exhibit a much faster error reduction, following $\mathcal{O}(\Delta t^2)$.
-        \item \textbf{Efficiency:} High-order temporal schemes allow for larger time steps while maintaining a precision comparable to the spatial discretization.
-    \end{itemize}
-\end{frame}
 
 \begin{frame}[plain, c]
     \centering
@@ -447,73 +449,104 @@
 
 % SLIDES BONUS
 
-\begin{frame}{Spatial Convergence: Forward Euler ($\theta = 0$)}
+\begin{frame}{Explicit Newmark ($\beta=0$)}
     \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_theta_0_h_r1_2.png}
-    
-    \vspace{0.3cm}
-    \begin{itemize}
-        \item \textbf{CFL Constraint:} Only stable combinations of $(h, \Delta t)$ are shown; the sweep script automatically filtered out unstable runs.
-        \item \textbf{1st Order Accuracy:} Similar to BE, the spatial convergence is limited by the $\mathcal{O}(\Delta t)$ temporal error.
-    \end{itemize}
+    \includegraphics[width=0.9\textwidth]{images/conv_newmark_025_dt_r1_2.png}
+    \includegraphics[width=0.9\textwidth]{images/conv_newmark_025_h_r1_2.png} 
 \end{frame}
 
-\begin{frame}{Spatial Convergence: Newmark Explicit ($\beta = 0$)}
+\begin{frame}{Implicit Newmark ($\beta=0.25$)}
     \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_newmark_000_h_r1_2.png}
-    
-    \vspace{0.3cm}
-    \begin{itemize}
-        \item \textbf{Second Order:} As a 2nd-order method in time, it allows for deeper spatial convergence before reaching the plateau.
-        \item \textbf{Stability:} Conditionally stable, requires adherence to the CFL condition.
-    \end{itemize}
+    \includegraphics[width=0.9\textwidth]{images/conv_newmark_000_dt_r1_2.png}
+    \includegraphics[width=0.9\textwidth]{images/conv_newmark_000_h_r1_2.png} 
 \end{frame}
 
-\begin{frame}{Spatial Convergence: Newmark Implicit ($\beta = 0.25$)}
+\begin{frame}{BE ($\theta=1.0$)}
     \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_newmark_025_h_r1_2.png}
-    
-    \vspace{0.3cm}
-    \begin{itemize}
-        \item \textbf{Unconditional Stability:} Combines the 2nd-order accuracy of CN with robust stability.
-        \item \textbf{High-Order Synergy:} Perfectly recovers $\mathcal{O}(h^3)$ for $r=2$ when $\Delta t$ is sufficiently small.
-    \end{itemize}
+    \includegraphics[width=0.9\textwidth]{images/conv_theta_1_dt_r1_2.png}
+    \includegraphics[width=0.9\textwidth]{images/conv_theta_1_h_r1_2.png} 
+\end{frame}
+
+\begin{frame}{CN ($\theta=0.5$)}
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/conv_theta_05_dt_r1_2.png}
+    \includegraphics[width=0.9\textwidth]{images/conv_theta_05_h_r1_2.png} 
+\end{frame}
+
+\begin{frame}{FE ($\theta=0.0$)}
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/conv_theta_0_dt_r1_2.png}
+    \includegraphics[width=0.9\textwidth]{images/conv_theta_0_h_r1_2.png} 
 \end{frame}
 
 
-\begin{frame}{Temporal Convergence: Forward Euler ($\theta = 0$)}
-    \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_theta_0_dt_r1_2.png}
+% \begin{frame}{Spatial Convergence: Forward Euler ($\theta = 0$)}
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{images/conv_theta_0_h_r1_2.png}
     
-    \vspace{0.3cm}
-    \begin{itemize}
-        \item \textbf{CFL Limitation:} Only the stable portion of the sweep is visible; the scheme confirms $\mathcal{O}(\Delta t)$ accuracy within its stability region.
-        \item \textbf{Comparison:} Displays similar accuracy to Backward Euler but requires strictly small time steps to avoid divergence.
-    \end{itemize}
-\end{frame}
+%     \vspace{0.3cm}
+%     \begin{itemize}
+%         \item \textbf{CFL Constraint:} Only stable combinations of $(h, \Delta t)$ are shown; the sweep script automatically filtered out unstable runs.
+%         \item \textbf{1st Order Accuracy:} Similar to BE, the spatial convergence is limited by the $\mathcal{O}(\Delta t)$ temporal error.
+%     \end{itemize}
+% \end{frame}
 
-\begin{frame}{Temporal Convergence: Newmark Explicit}
-    \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_newmark_000_dt_r1_2.png}
+% \begin{frame}{Spatial Convergence: Newmark Explicit ($\beta = 0$)}
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{images/conv_newmark_000_h_r1_2.png}
     
-    \vspace{0.3cm}
-    \begin{itemize}
-        \item \textbf{Second-Order Accuracy:} Confirms $\mathcal{O}(\Delta t^2)$ rate, providing a significant accuracy boost over the $\theta$-method (except for CN).
-        \item \textbf{Conditional Stability:} Stability is governed by the mesh size, requiring the automated filtering of the parameter grid.
-    \end{itemize}
-\end{frame}
+%     \vspace{0.3cm}
+%     \begin{itemize}
+%         \item \textbf{Second Order:} As a 2nd-order method in time, it allows for deeper spatial convergence before reaching the plateau.
+%         \item \textbf{Stability:} Conditionally stable, requires adherence to the CFL condition.
+%     \end{itemize}
+% \end{frame}
 
-
-\begin{frame}{Temporal Convergence: Newmark Implicit}
-    \centering
-    \includegraphics[width=0.85\textwidth]{images/conv_newmark_025_dt_r1_2.png}
+% \begin{frame}{Spatial Convergence: Newmark Implicit ($\beta = 0.25$)}
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{images/conv_newmark_025_h_r1_2.png}
     
-    \vspace{0.3cm}
-    \begin{itemize}
-        \item \textbf{Robustness:} Combines unconditional stability with second-order temporal accuracy $\mathcal{O}(\Delta t^2)$.
-        \item \textbf{Optimal Performance:} Exhibits the best balance between stability and error reduction, especially for high-order spatial elements ($r=2$).
-    \end{itemize}
-\end{frame}
+%     \vspace{0.3cm}
+%     \begin{itemize}
+%         \item \textbf{Unconditional Stability:} Combines the 2nd-order accuracy of CN with robust stability.
+%         \item \textbf{High-Order Synergy:} Perfectly recovers $\mathcal{O}(h^3)$ for $r=2$ when $\Delta t$ is sufficiently small.
+%     \end{itemize}
+% \end{frame}
+
+
+% \begin{frame}{Temporal Convergence: Forward Euler ($\theta = 0$)}
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{images/conv_theta_0_dt_r1_2.png}
+    
+%     \vspace{0.3cm}
+%     \begin{itemize}
+%         \item \textbf{CFL Limitation:} Only the stable portion of the sweep is visible; the scheme confirms $\mathcal{O}(\Delta t)$ accuracy within its stability region.
+%         \item \textbf{Comparison:} Displays similar accuracy to Backward Euler but requires strictly small time steps to avoid divergence.
+%     \end{itemize}
+% \end{frame}
+
+% \begin{frame}{Temporal Convergence: Newmark Explicit}
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{images/conv_newmark_000_dt_r1_2.png}
+    
+%     \vspace{0.3cm}
+%     \begin{itemize}
+%         \item \textbf{Second-Order Accuracy:} Confirms $\mathcal{O}(\Delta t^2)$ rate, providing a significant accuracy boost over the $\theta$-method (except for CN).
+%         \item \textbf{Conditional Stability:} Stability is governed by the mesh size, requiring the automated filtering of the parameter grid.
+%     \end{itemize}
+% \end{frame}
+
+
+% \begin{frame}{Temporal Convergence: Newmark Implicit}
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{images/conv_newmark_025_dt_r1_2.png}
+    
+%     \vspace{0.3cm}
+%     \begin{itemize}
+%         \item \textbf{Robustness:} Combines unconditional stability with second-order temporal accuracy $\mathcal{O}(\Delta t^2)$.
+%         \item \textbf{Optimal Performance:} Exhibits the best balance between stability and error reduction, especially for high-order spatial elements ($r=2$).
+%     \end{itemize}
+% \end{frame}
 
 
 
