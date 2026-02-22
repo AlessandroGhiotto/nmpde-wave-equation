@@ -29,10 +29,10 @@ parallelism.
 
 <div align="center">
   
-| Method              | Parameters         | Key properties                                                                                |
-| :------------------- | :------------------: | :--------------------------------------------------------------------------------------------- |
-| **Theta-method**    | $\theta \in [0,1]$ | $\theta=0$ → Forward Euler (FE) <br/> $\theta=\tfrac12$ → Crank–Nicolson (CN) <br/> $\theta=1$ →  Backward Euler (BE)              |
-| **Newmark-$\beta$** | $\gamma,\beta$   | $\beta=0$ → Central Difference method <br/>$\beta=\tfrac14, \gamma=\tfrac12$ → Middle Point rule |
+| Method           |     Parameters     | Key properties                                                                                                        |
+| :--------------- | :----------------: | :-------------------------------------------------------------------------------------------------------------------- |
+| **Theta-method** | $\theta \in [0,1]$ | $\theta=0$ → Forward Euler (FE) <br/> $\theta=\tfrac12$ → Crank–Nicolson (CN) <br/> $\theta=1$ →  Backward Euler (BE) |
+| **Newmark-β**    |   $\gamma,\beta$   | $\beta=0$ → Central Difference method <br/>$\beta=\tfrac14, \gamma=\tfrac12$ → Middle Point rule                      |
 
 </div>
 
@@ -159,7 +159,7 @@ The results of the simulation are written to the following folder `/results/<pro
 
 ## C++ code overview
 
-### `WaveEquationBase`
+### WaveEquationBase
 
 Abstract base class providing:
 
@@ -170,20 +170,20 @@ Abstract base class providing:
 - L2 / H1 error integration against an exact solution
 - VTU/PVTU output, CSV logging, divergence detection
 
-### `WaveTheta`
+### WaveTheta
 
 Inherits from `WaveEquationBase`. Rewrites the wave equation as a first-order
 system and applies the theta-method. Each time step solves **two** SPD systems
 (one for $u^{n+1}$, one for $v^{n+1}$) with CG + AMG.
 
-### `WaveNewmark`
+### WaveNewmark
 
 Inherits from `WaveEquationBase`. Uses the Newmark-$\beta$ family. Each time
 step solves **one** SPD system for the acceleration $a^{n+1}$, then updates
 $u$ and $v$ algebraically. A consistent initial acceleration $a^0$ is computed
 at startup by solving $M a^0 = f(0) - K u^0$.
 
-### `ParameterReader`
+### ParameterReader
 
 Thin wrapper around deal.II's `ParameterHandler`. Declares scalar parameters
 and function subsections, parses JSON/PRM files, and initialises `FunctionParser`
@@ -196,11 +196,11 @@ objects (supporting symbolic `pi` constants).
 All scripts live in `scripts/` and drive parametric studies by repeatedly
 invoking the C++ executables with different parameter combinations.
 
-| Python script                            | Purpose                                                                                                                                                   |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `convergence_sweep.py`            | Sweep over `(scheme, Nel, R, dt)` to study spatial and temporal convergence, applying also Courant-Friedrichs-Lewy (CFL) filtering for explicit methods.                                  |
-| `dissipation_dispersion_sweep.py` | Fix the mesh, sweep over `dt` for each scheme, logging energy values, errors and point-probing at each step to analyse numerical dissipation and dispersion.          |
-| `scalability_sweep.py`            | Fix discretisation, measure the wall-clock time for a given number of MPI processes. |
+| Python script                     | Purpose                                                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `convergence_sweep.py`            | Sweep over `(scheme, Nel, R, dt)` to study spatial and temporal convergence, applying also Courant-Friedrichs-Lewy (CFL) filtering for explicit methods.     |
+| `dissipation_dispersion_sweep.py` | Fix the mesh, sweep over `dt` for each scheme, logging energy values, errors and point-probing at each step to analyse numerical dissipation and dispersion. |
+| `scalability_sweep.py`            | Fix discretisation, measure the wall-clock time for a given number of MPI processes.                                                                         |
 
 ### Common CLI flags
 
@@ -224,7 +224,7 @@ Each script produces CSV result files that are later read by the analysis notebo
 
 Three PBS job scripts are provided in `scripts/`:
 
-| PBS script                         | What it runs                                              |
+| PBS script                       | What it runs                                               |
 | -------------------------------- | ---------------------------------------------------------- |
 | `convergence_all.pbs`            | `convergence_sweep.py` with 16 MPI processes               |
 | `dissipation_dispersion_all.pbs` | `dissipation_dispersion_sweep.py` with 16 MPI processes    |

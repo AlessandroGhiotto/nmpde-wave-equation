@@ -1,0 +1,17 @@
+/* ── Centred table helper ──────────────────────────────────────────────────
+   The md_filter.py input filter converts
+       <div align="center"> … </div>
+   into
+       \htmlonly <div class="centered-table"> \endhtmlonly … \htmlonly </div> \endhtmlonly
+   so Doxygen processes Markdown inside the table normally while still
+   emitting this <div> tag.  The rule below then centres the table.
+   ───────────────────────────────────────────────────────────────────────── */
+.centered-table {
+    display: flex;
+    justify-content: center;
+}
+
+.centered-table>table.markdownTable {
+    width: auto;
+    /* prevent the table from stretching to 100 % */
+}

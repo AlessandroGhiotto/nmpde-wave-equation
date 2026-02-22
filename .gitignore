@@ -440,3 +440,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+### Doxygen ###
+html
