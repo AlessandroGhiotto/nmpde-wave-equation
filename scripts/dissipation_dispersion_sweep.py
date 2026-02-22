@@ -81,9 +81,7 @@ parser.add_argument(
     "--dt",
     type=float,
     nargs="+",
-    default=[
-        0.15
-    ],  # [0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0001, 0.00005],
+    default=[0.15, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0001, 0.00005],
 )
 parser.add_argument(
     "--T", type=float, default=5.0, help="Final time (long enough for several periods)"

@@ -1,33 +1,47 @@
 % DO NOT REMOVE SPACES BETWEEN LINES!
 \thispagestyle{empty}
-\AddToShipoutPicture*{\BackgroundPic}
+\newcommand\BackgroundPicTR{% Adding background picture on top right 
+	\put(200,330){%
+		\parbox[b][\paperheight]{\paperwidth}{%
+			\vfill
+			\centering
+			\transparent{0.4}
+			\includegraphics[width=0.70\paperwidth]{./raggiera_polimi.eps}
+			\vfill
+}}}
+\AddToShipoutPicture*{\BackgroundPicTR}
+
+\begin{minipage}{0.95\textwidth}
+    \vspace*{-12.0cm}
+    \hspace{0.5cm}
+    \includegraphics[trim={0cm 0 0 0},clip, width=0.8\textwidth]{images/logo_polimi_ing_indinf.pdf}
+    \hfill
+\end{minipage}
+
+% \begin{center}
+%     
+%     \includegraphics[width=0.6\textwidth]{images/logo_polimi_ing_indinf.pdf} \\
+%     \vspace{0.15cm}
+% \end{center}
+
+\vspace{2.7cm}
 
 \begin{center}
-\vspace*{-1.8cm}
+    {\LARGE \bfseries \color{bluePoli} \title \par}
 
-\includegraphics[width=0.6\textwidth]{images/logo_polimi_ing_indinf.pdf} \\
-
-\vspace{0.15cm}
+    \vspace{0.7cm}
+    {\fontsize{12}{14}\selectfont \color{bluePoli} \COURSENAME \par}
+    \vspace{0.1cm}
+    {\fontsize{12}{14}\selectfont \color{bluePoli} MSc in \course \par}
+    {\fontsize{12}{14}\selectfont \color{bluePoli} Academic Year: \YEAR \par}
 \end{center}
 
-\vspace{0.15cm}
-
-\begin{center}
-{\LARGE \bfseries \color{bluePoli} \title \par}
-
-\vspace{0.1cm}
-{\fontsize{10}{12}\selectfont \color{bluePoli} \COURSENAME \par}
-\vspace{0.03cm}
-{\fontsize{10}{12}\selectfont \color{bluePoli} MSc in \course \par}
-{\fontsize{10}{12}\selectfont \color{bluePoli} Academic Year: \YEAR \par}
-
-\vspace{0.1cm}
-{\normalsize
-\textbf{\author}, \ID \\[0.04cm]
-\textbf{\authorone}, \IDone \\[0.04cm]
-\textbf{\authortwo}, \IDtwo \\[0.04cm]
-\textbf{\authorthree}, \IDthree \par}
-\end{center}
+    \vspace{0.2cm}
+    {\normalsize
+    \textbf{\author}, \ID \\[0.04cm]
+    \textbf{\authorone}, \IDone \\[0.04cm]
+    \textbf{\authortwo}, \IDtwo \\[0.04cm]
+    \textbf{\authorthree}, \IDthree \par}
 
 \vspace{0.1cm}
 \noindent\rule{\textwidth}{0.5pt}

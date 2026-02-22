@@ -1,0 +1,152 @@
+\section{Convergence Analysis}
+\label{sec:convergence}
+
+Under the standard \emph{a priori} error estimate for finite-element semi-discretizations of the wave equation, the total error at time $t_n = n\Delta t$ is bounded by
+\begin{equation}
+\label{eq:error_bound}
+\|u(\cdot,t_n) - u_h^n\| \;\leq\; C\bigl(h^{s} + \Delta t^{q}\bigr),
+\end{equation}
+where $s$ denotes the spatial convergence order ($r{+}1$ in the $L^2$ norm, $r$ in the $H^1$ norm for polynomial degree~$r$) and $q$ is the temporal convergence order of the time-stepping scheme.
+The purpose of this section is to verify \eqref{eq:error_bound} numerically by performing a systematic convergence study on a test problem with a known analytical solution. The Python script \texttt{convergence\_sweep.py} automates a grid search over all combinations of scheme, mesh size, polynomial degree, and time step, collecting the final relative errors produced by each run.
+
+\subsection{Test Problem}
+
+We consider a standing-mode wave on the unit square $\Omega = [0,1]^2$ with homogeneous Dirichlet boundary conditions:
+\begin{equation}
+\label{eq:standing_mode}
+\begin{cases}
+\partial_{tt} u - \Delta u = 0 & \text{in } \Omega \times (0, T], \\
+u = 0 & \text{on } \partial\Omega \times [0, T], \\
+u(\mathbf{x}, 0) = \sin(\pi x)\sin(\pi y), \\
+\partial_t u(\mathbf{x}, 0) = 0,
+\end{cases}
+\end{equation}
+whose exact solution is $u_{\mathrm{exact}}(\mathbf{x},t) = \cos \bigl(\sqrt{2}\,\pi\, t\bigr)\,\sin(\pi x)\sin(\pi y)$. The final time is $T = 1$.
+
+\subsection{Sweep Parameters}
+
+The convergence sweep explores the following parameter grid:
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Parameter} & \textbf{Values} \\
+\hline
+Mesh elements per side $N_{\mathrm{el}}$ & 10, 20, 40, 80, 160, 320 \\
+FE polynomial degree $r$ & 1, 2 \\
+Time step $\Delta t$ & $10^{-1}$, $5 {\times} 10^{-2}$, \ldots, $10^{-4}$ \quad (10 values) \\
+\end{tabular}
+\end{center}
+
+\noindent Five schemes are tested:
+
+\begin{center}
+\begin{tabular}{llcc}
+\textbf{Scheme} & \textbf{Parameters} & \textbf{Temporal order} & \textbf{Stability} \\
+\hline
+$\theta$-method (FE) & $\theta = 0$ & 1 & Conditional \\
+$\theta$-method (CN) & $\theta = 0.5$ & 2 & Unconditional \\
+$\theta$-method (BE) & $\theta = 1$ & 1 & Unconditional \\
+Newmark (explicit) & $\beta = 0,\; \gamma = \tfrac{1}{2}$ & 2 & Conditional \\
+Newmark (implicit) & $\beta = \tfrac{1}{4},\; \gamma = \tfrac{1}{2}$ & 2 & Unconditional \\
+\end{tabular}
+\end{center}
+
+\noindent For the two conditionally stable schemes (Forward Euler and explicit Newmark), the sweep script automatically filters out $(N_{\mathrm{el}}, \Delta t)$ combinations that violate the CFL condition. Runs that produce relative errors above $10^5$ are flagged as diverged and excluded from the analysis. The total sweep comprises 490 solver runs.
+
+\subsection{Temporal Convergence}
+
+To isolate the temporal error, we plot the relative $L^2$ and $H^1$ errors at $t = T$ as a function of $\Delta t$ for fixed mesh sizes $h$. As the mesh is refined, the spatial error decreases and the temporal convergence rate becomes visible.
+
+The results from \Cref{fig:conv_dt_be,fig:conv_dt_cn,fig:conv_dt_fe,fig:conv_dt_nmk0,fig:conv_dt_nmk025} confirm the expected asymptotic behavior:
+\begin{itemize}
+    \item \textbf{Forward Euler} ($\theta = 0$) and \textbf{Backward Euler} ($\theta = 1$) exhibit first-order temporal convergence, $\mathcal{O}(\Delta t)$, in both the $L^2$ and $H^1$ norms.
+    \item \textbf{Crank--Nicolson} ($\theta = 0.5$) exhibits second-order temporal convergence, $\mathcal{O}(\Delta t^2)$.
+    \item Both \textbf{Newmark} variants ($\beta = 0$ and $\beta = 0.25$, with $\gamma = 0.5$) exhibit second-order temporal convergence, $\mathcal{O}(\Delta t^2)$.
+\end{itemize}
+
+For coarse meshes the error is dominated by the spatial component, and the curves plateau regardless of how small $\Delta t$ is taken. Only when $h$ is sufficiently refined does the temporal slope emerge clearly.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_theta_0_dt_r1_2.png}
+    \caption{Temporal convergence for the Forward Euler scheme ($\theta = 0$). Each sub-panel shows $L^2$ or $H^1$ relative error vs.\ $\Delta t$ for $r=1$ (top) and $r=2$ (bottom); each curve corresponds to a fixed mesh size~$h$.}
+    \label{fig:conv_dt_fe}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_theta_05_dt_r1_2.png}
+    \caption{Temporal convergence for the Crank--Nicolson scheme ($\theta = 0.5$). Layout as in Figure~\ref{fig:conv_dt_fe}.}
+    \label{fig:conv_dt_cn}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_theta_1_dt_r1_2.png}
+    \caption{Temporal convergence for the Backward Euler scheme ($\theta = 1$). Layout as in Figure~\ref{fig:conv_dt_fe}.}
+    \label{fig:conv_dt_be}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_newmark_000_dt_r1_2.png}
+    \caption{Temporal convergence for explicit Newmark ($\beta = 0,\; \gamma = 0.5$). Layout as in Figure~\ref{fig:conv_dt_fe}.}
+    \label{fig:conv_dt_nmk0}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_newmark_025_dt_r1_2.png}
+    \caption{Temporal convergence for implicit Newmark ($\beta = 0.25,\; \gamma = 0.5$). Layout as in Figure~\ref{fig:conv_dt_fe}.}
+    \label{fig:conv_dt_nmk025}
+\end{figure}
+
+\subsection{Spatial Convergence}
+
+To isolate the spatial error, we plot the relative errors as a function of the mesh size $h$ for fixed time steps $\Delta t$. The expected asymptotic rates for the Galerkin FEM with polynomial degree $r$ are $\mathcal{O}(h^{r+1})$ in the $L^2$ norm and $\mathcal{O}(h^{r})$ in the $H^1$ norm.
+
+The numerical results obtained in \Cref{fig:conv_h_be,fig:conv_h_cn,fig:conv_h_fe,fig:conv_h_nmk0,fig:conv_h_nmk025} are in agreement with the theory:
+\begin{itemize}
+    \item For $r = 1$: the observed $L^2$ rate approaches $\mathcal{O}(h^2)$ and the $H^1$ rate approaches $\mathcal{O}(h)$ as $\Delta t$ is taken small enough for the temporal error not to dominate.
+    \item For $r = 2$: the observed $L^2$ rate approaches $\mathcal{O}(h^3)$ and the $H^1$ rate approaches $\mathcal{O}(h^2)$.
+\end{itemize}
+
+When $\Delta t$ is too large relative to $h$, the spatial convergence curves plateau early because the total error is dominated by the temporal component. see Fig.~\ref{fig:conv_h_be} for the $L^2$ norm with $r=2$ using BE, where the error is bounded by $C(h^3 + \Delta t)$. 
+\\
+Conversely, for sufficiently small $\Delta t$ the curves collapse onto one another and the pure spatial rate is visible. See Fig.~\ref{fig:conv_h_cn} for the $H^1$ norm with $r=1$ using CN, where the error is bounded by $C(h + \Delta t^2)$.
+
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_theta_0_h_r1_2.png}
+    \caption{Spatial convergence for the Forward Euler scheme ($\theta = 0$). Each sub-panel shows $L^2$ or $H^1$ relative error vs.\ $h$ for $r=1$ (top) and $r=2$ (bottom); each curve corresponds to a fixed time step~$\Delta t$.}
+    \label{fig:conv_h_fe}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_theta_05_h_r1_2.png}
+    \caption{Spatial convergence for the Crank--Nicolson scheme ($\theta = 0.5$). Layout as in Figure~\ref{fig:conv_h_fe}.}
+    \label{fig:conv_h_cn}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_theta_1_h_r1_2.png}
+    \caption{Spatial convergence for the Backward Euler scheme ($\theta = 1$). Layout as in Figure~\ref{fig:conv_h_fe}.}
+    \label{fig:conv_h_be}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_newmark_000_h_r1_2.png}
+    \caption{Spatial convergence for explicit Newmark ($\beta = 0,\; \gamma = 0.5$). Layout as in Figure~\ref{fig:conv_h_fe}.}
+    \label{fig:conv_h_nmk0}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{images/conv_newmark_025_h_r1_2.png}
+    \caption{Spatial convergence for implicit Newmark ($\beta = 0.25,\; \gamma = 0.5$). Layout as in Figure~\ref{fig:conv_h_fe}.}
+    \label{fig:conv_h_nmk025}
+\end{figure}

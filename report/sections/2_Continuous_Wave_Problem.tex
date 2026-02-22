@@ -1,0 +1,69 @@
+
+\section{Continuous Wave Problem}
+\label{sec:continuous_problem}
+
+\subsection{Strong Formulation}
+We consider a bounded domain $\Omega \subset \mathbb{R}^2$. The wave propagation is governed by the following second-order hyperbolic PDE \cite{salsa2015partial}: find $u(\mathbf{x},t)$ such that
+
+\begin{equation}
+\label{eq:strong_form}
+\begin{cases} 
+\partial_{tt} u(\mathbf{x}, t) - \nabla \cdot (c^2 \nabla u(\mathbf{x}, t)) = f(\mathbf{x},t) & \text{in } \Omega \times (0, T] \\
+u(\mathbf{x}, t) = \phi(\mathbf{x}, t) & \text{on } \partial \Omega \times [0, T] \\
+u(\mathbf{x}, 0) = u_0(\mathbf{x}) & \text{in } \Omega \\
+\partial_t u(\mathbf{x}, 0) = v_0(\mathbf{x}) & \text{in } \Omega 
+\end{cases}
+\end{equation}
+
+Here $c(\mathbf{x}, t)$ is the wave speed (possibly depending on space and time), $f$ is an external forcing term, $u_0$ and $v_0$ are the initial displacement and velocity, and $\phi$ prescribes the Dirichlet boundary condition on $\partial \Omega$ for all $t \in [0, T]$.
+
+\subsection{Weak Formulation}
+
+To apply the Finite Element Method (FEM) we need the weak formulation of the problem. We define the test space $V = H^1_0(\Omega) = \{v \in H^1(\Omega) : v|_{\partial\Omega} = 0\}$, which consists of functions wich are zero on the boundary. When the Dirichlet datum is non-homogeneous ($\phi \neq 0$), the solution $u$ lives in the space $V_\phi = \{w \in H^1(\Omega) : w|_{\partial\Omega} = \phi\}$.
+
+\vspace{0.5cm}
+To ensure compatibility with the Lax-Milgram Lemma \cite{quarteroni2008numerical}, we introduce a \textbf{lifting operator} $\mathcal{R}_\phi \in V_\phi$. We then split the solution as
+\begin{equation}
+    u(\mathbf{x}, t) = \hat{u}(\mathbf{x}, t) + \mathcal{R}_\phi(\mathbf{x}, t)
+\end{equation}
+where $\hat{u} \in V$ is the new unknown, which has homogeneous Dirichlet boundary conditions.
+
+We multiply the PDE by a test function $v \in V$ and integrate over $\Omega$:
+\begin{equation}
+    \int_{\Omega} \partial_{tt} u \; v \, d\Omega - \int_{\Omega} \nabla \cdot (c^2 \nabla u) v \, d\Omega = \int_{\Omega} f v \, d\Omega \quad \forall v \in V
+\end{equation}
+Applying Green's formula to the diffusion term gives
+\begin{equation}
+    \int_{\Omega} \partial_{tt} u \; v \, d\Omega + \int_{\Omega} c^2 \nabla u \cdot \nabla v \, d\Omega - \int_{\partial \Omega} (c^2 \nabla u \cdot \mathbf{n}) v \, d\gamma = \int_{\Omega} f v \, d\Omega \quad \forall v \in V
+\end{equation}
+Because $v = 0$ on $\partial \Omega$, the boundary integral vanishes. Substituting $u = \hat{u} + \mathcal{R}_\phi$ and using linearity, we get the weak formulation: 
+
+\begin{equation}
+\label{eq:weak_problem_lifting}
+\begin{cases}
+\forall t \in (0,T), \text{ find } \hat{u}(t) \in V \text{ such that:} \\
+\int_{\Omega} \partial_{tt} \hat{u} \; v \, d\Omega + a(\hat{u}, v) = G(v) \quad \forall v \in V \\
+\hat{u}(\mathbf{x},0) = u_0(\mathbf{x}) - \mathcal{R}_\phi(\mathbf{x},0) \\
+\partial_t \hat{u}(\mathbf{x},0) = v_0(\mathbf{x}) - \partial_t \mathcal{R}_\phi(\mathbf{x},0)
+\end{cases}
+\end{equation}
+% with the initial conditions: 
+% $$
+% u(x,0)=u_0(x)
+% $$
+% $$
+% \frac{\partial u}{\partial t}(x,0)=u_1(x)
+% $$
+
+The bilinear and linear forms are defined as follows:
+\begin{itemize}
+    % \item \textbf{Mass form}: $m(w, v) = \int_{\Omega} w v \, d\Omega$ 
+    % (used for assembling the mass matrix $\mathbf{M}$).
+    \item \textbf{Stiffness form}:  Let $a: V\times V \rightarrow \mathbb{R}$, with $a(u, v) = \int_{\Omega} c^2 \nabla u \cdot \nabla v \, d\Omega$ 
+    % (used for assembling the stiffness matrix $\mathbf{A}$).
+    \item \textbf{RHS}: Let $G: V\rightarrow \mathbb{R}$, with $G(v) = \int_{\Omega} f v \, d\Omega - \int_{\Omega} \partial_{tt} \mathcal{R}_\phi \; v \, d\Omega - a(\mathcal{R}_\phi, v) $, which gathers all the terms that do not involve the unknown $\hat{u}$.
+\end{itemize}
+
+
+The integration by parts removes the second-order spatial derivatives, so the formulation only requires $H^1$ regularity. Because of the lifting, the unknown $\hat{u}$ satisfies homogeneous Dirichlet conditions, and the bilinear form
+$a(\cdot, \cdot)$ is continuous and coercive on $H^1_0(\Omega)$, which guarantees existence and uniqueness of the solution \cite{evans2010partial, quarteroni2008numerical}.

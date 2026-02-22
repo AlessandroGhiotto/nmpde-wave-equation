@@ -2,11 +2,11 @@
 	"Geometry": "[0.0, 3.0] x [0.0, 1.0]",
 	"Nel": "180, 60",
 	"R": "1",
-	"T": "5.0",
+	"T": "60.0",
 	"Theta": "0.5",
 	"Beta": "0.25",
 	"Gamma": "0.5",
-	"Dt": "0.015625",
+	"Dt": "0.05",
 	"C": {
 		"Function constants": "",
 		"Function expression": "1.0",

@@ -1,0 +1,18 @@
+\section{Introduction}
+The wave equation is one of the most important models in mathematical physics: it describes how disturbances propagate through a medium and appears in acoustics, electromagnetism, seismology and structural dynamics \cite{evans2010partial}. Being a second-order hyperbolic PDE, it relates the acceleration of the solution to its spatial curvature. Solving it numerically in an accurate and efficient way is therefore of great practical interest.
+
+Beyond the classical stability constraint given by the Courant--Friedrichs--Lewy (CFL) condition \cite{courant1928CFL}, numerical methods for the wave equation can suffer from two additional artefacts \cite{hughes2012finite}: \emph{numerical dispersion}, which alters the propagation speed of different frequency components and distorts the wave shape, and \emph{numerical dissipation}, which causes a non-physical decay of the amplitude. Controlling these effects requires a careful choice of both the spatial mesh and the time-integration scheme.
+
+In this work we compare several well-known time-stepping methods \cite{newmark1959method, quarteroni2008numerical} applied to the finite-element semi-discretization of the wave equation. The goal is to go beyond a purely theoretical analysis and evaluate, through numerical experiments, the practical trade-offs between accuracy, energy conservation, and computational cost. In particular, we study convergence rates, dissipation and dispersion properties, and parallel scalability on the HPC cluster of Politecnico di Milano.
+
+\begin{figure}[h]
+    \centering
+    \subfloat[Square wave]{\includegraphics[width=0.32\textwidth]{sol-square.png}}
+    \hfill
+    \subfloat[Standing wave]{\includegraphics[width=0.32\textwidth]{sol-standing.png}}
+    \hfill
+    \subfloat[Traveling wave]{\includegraphics[width=0.32\textwidth]{sol-traveling.png}}
+    \caption{Snapshots of three representative simulations produced by our solver. Animated videos of these and other test cases are available in this \href{https://www.youtube.com/playlist?list=PLh9fwY76Oobay4rXdlAKkHKuC61a1lL61}{YouTube playlist}.}
+    \label{fig:solution_examples}
+\end{figure}
+

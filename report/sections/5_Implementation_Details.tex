@@ -1,0 +1,77 @@
+\section{Implementation Details}
+\label{sec:implementation}
+
+This section describes the software architecture and organization of the numerical solver for the wave equation. The implementation is written in C++17 and relies on the \textbf{deal.II} finite element library \cite{arndt2021dealii} for spatial discretization, combined with the \textbf{Trilinos} framework for distributed sparse linear algebra. The code supports both sequential and parallel execution through MPI.
+
+\subsection{Overall Architecture}
+
+The software follows an object-oriented design built around three high-level components:
+\begin{itemize}
+    \item A \textbf{wave equation base class} that encapsulates the spatial discretization, parallel mesh management, matrix assembly, and all simulation input/output operations.
+    \item Two \textbf{concrete solver classes}, one for each time-integration family, that inherit the common infrastructure and implement the scheme-specific time-stepping logic.
+    \item A \textbf{parameter reader} that parses external configuration files, enabling full runtime control over the problem definition and discretization parameters without recompilation.
+\end{itemize}
+
+This separation of concerns allows the spatial discretization and I/O infrastructure to be defined once and shared by all time-integration methods. We have two executables for the time discretization methods, and modifying the problem data requires only a different JSON parameter file, with no changes to the compiled codes.
+
+\subsubsection{Wave Equation Base Class}
+
+The abstract class \texttt{WaveEquationBase} provides the functionalities shared by both solvers. It includes:
+
+\begin{itemize}
+    \item \textbf{Mesh generation and distribution.} A simplicial (triangular) mesh is created on a rectangular domain $\Omega$ via \texttt{subdivided\_hyper\_rectangle\_with\_simplices}, partitioned across MPI ranks with \texttt{GridTools::partition\_triangulation}, and stored in a object of type \\ 
+    \texttt{parallel::fullydistributed::Triangulation}.
+    
+    \item \textbf{Finite element space setup.} The Lagrangian simplex element \texttt{FE\_SimplexP} of polynomial degree $r$ is instantiated together with a matching \texttt{QGaussSimplex} quadrature rule of order $r+1$.
+    
+    \item \textbf{Degree-of-freedom management.} Degrees of freedom are distributed on the partitioned mesh via the \texttt{DoFHandler}, and the associated distributed sparsity pattern is built for the Trilinos sparse matrices.
+    
+    \item \textbf{Global matrices.} The mass matrix $\mathbf{M}$ and the stiffness matrix $\mathbf{A}$ (weighted by the wave speed $c^2$) are assembled once at startup, since both are time-independent. Assembly is performed in parallel, each MPI process computes local element contributions and inserts them into \texttt{TrilinosWrappers::SparseMatrix} objects, which handle the distributed storage and communication.
+    
+    \item \textbf{Diagnostics and logging.} At user-specified intervals the base class computes the discrete energy $E^n = \tfrac{1}{2}\bigl(\mathbf{v}^T \mathbf{M}\, \mathbf{v} + \mathbf{u}^T \mathbf{A}\, \mathbf{u}\bigr)$, evaluates $L^2$ and $H^1$ errors against an exact solution (when available), records a point probe at the domain centre, and logs CG iteration counts. All diagnostic data are written to CSV files for post-processing.
+    
+    \item \textbf{Solution output.} Displacement and velocity fields are exported in VTU/PVTU format at configurable intervals, enabling visualization in ParaView.
+    
+    \item \textbf{Divergence detection.} The $L^2$ norms of the solution vectors are monitored at each time step; if they exceed a threshold the simulation is terminated early with a diagnostic message.
+\end{itemize}
+
+The class exposes a single pure-virtual method \texttt{run()} that derived classes must override to implement the time-stepping loop. 
+
+%All problem data---wave speed $c(\mathbf{x})$, forcing term $f(\mathbf{x},t)$, initial conditions $u_0$ and $v_0$, boundary data $g$ and $\partial_t g$, and an optional manufactured exact solution---are passed to the base class at construction time and stored as references to \texttt{deal.II} function objects.
+
+\subsubsection{Theta-Method Solver}
+
+The class \texttt{WaveTheta} inherits from \texttt{WaveEquationBase} and implements the $\theta$-method described in Section~\ref{subsec:theta_method}. At each time step it solves \emph{two} SPD systems sequentially, one for the displacement $\mathbf{u}^{n+1}$ and one for the velocity $\mathbf{v}^{n+1}$, enforcing Dirichlet conditions $\phi(t^{n+1})$ and $\partial_t \phi(t^{n+1})$ respectively. Both solves use Conjugate Gradient with an AMG preconditioner.
+
+\subsubsection{Newmark Solver}
+
+The class \texttt{WaveNewmark} inherits from \texttt{WaveEquationBase} and implements the Newmark-$\beta$ family described in Section~\ref{subsec:newmark}. It introduces the discrete acceleration $\mathbf{a}^n$ as an additional unknown, a consistent $\mathbf{a}^0$ is computed at startup by solving $\mathbf{M}\,\mathbf{a}^0 = \mathbf{G}(0) - \mathbf{A}\,\mathbf{u}^0$. At each subsequent step only \emph{one} SPD system is solved for $\mathbf{a}^{n+1}$, after which $\mathbf{u}^{n+1}$ and $\mathbf{v}^{n+1}$ are updated algebraically. The same CG~+~AMG solver strategy is used.
+
+\subsubsection{Parameter Reader}
+
+The class \texttt{ParameterReader} wraps deal.II's \texttt{ParameterHandler} and manages the parsing of external JSON configuration files. A parameter file specifies:
+
+\begin{itemize}
+    \item \textbf{Domain and discretization}: geometry bounds (e.g.\ $[0,1]^2$), number of mesh elements per direction, and polynomial degree $r$.
+    \item \textbf{Time integration}: final time $T$, time-step size $\Delta t$, and method-specific parameters ($\theta$ for the theta-method; $\gamma$ and $\beta$ for Newmark).
+    \item \textbf{Problem data}: symbolic mathematical expressions for $c(\mathbf{x})$, $f(\mathbf{x},t)$, $u_0(\mathbf{x})$, $v_0(\mathbf{x})$, $\phi(\mathbf{x},t)$, $\partial_t \phi(\mathbf{x},t)$, and optionally the exact solution.
+    \item \textbf{Output control}: flags for saving VTU snapshots, enabling CSV logging, and specifying the logging and printing frequency.
+\end{itemize}
+
+The function expressions are evaluated at runtime by \texttt{deal.II}'s \texttt{FunctionParser}, which supports standard mathematical operators and constants (e.g.\ \texttt{pi}). This design enables the definition of arbitrary test cases without recompiling the solver.
+
+\subsection{Execution Flow}
+
+Each simulation is launched via a dedicated executable (\texttt{main-theta} or \texttt{main-newmark}) with the path to a JSON parameter file. After MPI initialization, the \texttt{ParameterReader} parses the file and populates all \texttt{FunctionParser} objects. A solver instance is then constructed and its \texttt{run()} method is invoked, which creates the distributed mesh, sets up the FE space, assembles the global matrices, and enters the time-stepping loop from $t=0$ to $t=T$. At configurable intervals, energy, errors, and solution snapshots are logged to CSV and VTU files. Upon completion a summary row is appended to a convergence CSV for cross-run comparison.
+
+\subsection{Parametric Studies and HPC Execution}
+
+The numerical experiments presented in this report require hundreds of solver runs with varying discretization parameters and schemes. To automate this process, three Python driver scripts repeatedly invoke the C++ executables with different parameter combinations and collect the resulting CSV data:
+
+\begin{itemize}
+    \item \textbf{Convergence sweep} (\texttt{convergence\_sweep.py}): iterates over combinations of scheme, mesh size $N_\mathrm{el}$, polynomial degree $r$, and time step $\Delta t$. For conditionally stable (explicit) methods, runs that violate the CFL condition are automatically filtered out.
+    \item \textbf{Dissipation and dispersion sweep} (\texttt{dissipation\_dispersion\_sweep.py}): fixes the spatial mesh and sweeps over $\Delta t$ for each scheme, logging per-step energy, errors, and a point-probe time series to characterize numerical dissipation and phase shift.
+    \item \textbf{Scalability sweep} (\texttt{scalability\_sweep.py}): fixes the discretization and measures the wall-clock time for an increasing number of MPI processes, producing the data for strong-scaling analysis.
+\end{itemize}
+
+All production runs were executed on the Politecnico di Milano HPC "Students Cluster" through PBS job scripts that copy the project to the node \textit{scratch\_local} storage for fast I/O, bind MPI ranks to physical cores, and copy the resulting CSV files back upon completion.

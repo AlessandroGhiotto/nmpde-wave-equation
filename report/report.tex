@@ -11,7 +11,7 @@
 
 % Insert here the info that will be displayed into your Title page 
 % -> title of your work
-\renewcommand{\title}{Numerical Solvers for the Second-Order Wave Equation}
+\renewcommand{\title}{Numerical Solvers for the Wave Equation}
 % -> author name and surname
 \renewcommand{\author}{Roberto Di Lauro}
 \newcommand{\authorone}{Thomas Fabbris}
@@ -30,15 +30,16 @@
 \newcommand{\COURSENAME}{Numerical Methods for Partial Differential Equations}
 % -> abstract
 \renewcommand{\abstract}{
-This project presents the development, implementation, and performance analysis of a  numerical solver for the second-order wave equation. The solver is built upon the \textbf{deal.II} finite element library and utilizes \textbf{Trilinos} wrappers for distributed linear algebra and parallel computing. The computational domain is discretized using simplicial meshes imported from \textbf{GMSH} or generated internally, supporting various polynomial degrees $r$ for the finite element space.
+This project presents the development, implementation, and performance analysis of a  numerical solver for the second-order wave equation. The solver is built upon the \textbf{deal.II} finite element library and utilizes \textbf{Trilinos} wrappers for distributed linear algebra and parallel computing. The computational domain is discretized using simplicial meshes generated internally, supporting various polynomial degrees $r$ for the finite element space.
 
 \vspace{0.3cm}
 \noindent We investigate two main families of time-integration schemes: the \textbf{$\theta$-methods} (e.g., Forward Euler, Crank-Nicolson, and Backward Euler) and the \textbf{Newmark-beta} family. A rigorous numerical analysis is performed, focusing on:
 
+\vspace{0.1cm}
 \begin{enumerate}
     \item \textbf{Convergence Analysis}: Evaluation of relative $L^2$ and $H^1$ errors across multiple spatial and temporal resolutions to verify theoretical accuracy rates.
     \item \textbf{Dissipation and Dispersion}: Study of energy conservation properties and phase errors introduced by the discrete approximation.
-    \item \textbf{Scalability}: Performance benchmarks conducted on the \textbf{Politecnico di Milano HPC cluster}, evaluating parallel speedup and efficiency.
+    \item \textbf{Scalability}: Performance benchmarks conducted on the \textbf{Politecnico di Milano HPC "Students Cluster"}, evaluating parallel speedup and efficiency.
 \end{enumerate}
 
 \vspace{0.3cm}
@@ -57,26 +58,33 @@ This project presents the development, implementation, and performance analysis 
 \input{configuration-files/title-page}
 
 %-----------------------------------------------------------------------------
+% TABLE OF CONTENTS
+\newpage
+\tableofcontents
+%-----------------------------------------------------------------------------
 % INTRODUCTION
 \newpage
 %-----------------------------------------------------------------------------
-\input{sections/introduction.tex}
+\input{sections/1_introduction.tex}
 
 \vspace{1.0cm}
 
-\input{sections/Continuous_Wave_Problem.tex}
+\input{sections/2_Continuous_Wave_Problem.tex}
 \vspace{0.5cm}
-\input{sections/Spatial_Discretization.tex}
+\input{sections/3_Spatial_Discretization.tex}
 \vspace{1.0cm}
-\input{sections/Time_Discretization.tex}
-\newpage
-\input{sections/Implementation_Details.tex}
+\input{sections/4_Time_Discretization.tex}
+% \newpage
+\input{sections/5_Implementation_Details.tex}
+\input{sections/6_Convergence.tex}
+\input{sections/7_Dissipation_Dipsersion.tex}
+\input{sections/8_Scalability.tex}
 
 %-----------------------------------------------------------------------------
 % CONCLUSION
 %-----------------------------------------------------------------------------
-\input{sections/conclusion.tex}
-
+\input{sections/9_conclusion.tex}
+\newpage
 %-----------------------------------------------------------------------------
 % BIBLIOGRAPHY
 %-----------------------------------------------------------------------------
