@@ -12,22 +12,15 @@ While the convergence study of \Cref{sec:convergence} quantifies the global erro
 
 We reuse the standing-mode problem \eqref{eq:standing_mode} on $\Omega = [0,1]^2$ with the exact solution
 \begin{equation}
-    u_{\mathrm{exact}}(\mathbf{x}, t)
-    = \cos\!\bigl(\sqrt{2}\,\pi\, t\bigr)\,\sin(\pi x)\,\sin(\pi y),
+    u_{\mathrm{exact}}(x, y, t)
+    = \cos\bigl(\sqrt{2}\,\pi\, t\bigr)\,\sin(\pi x)\,\sin(\pi y),
     \qquad
     \omega_{\mathrm{exact}} = \sqrt{2}\,\pi,
 \end{equation}
 but now we extend the simulation to $T = 5\,\mathrm{s}$ in order to let phase and amplitude errors accumulate.
 
 The spatial mesh is fixed at $N_{\mathrm{el}} = 60$ elements per side with polynomial degree $r = 1$, so that computations needed for each timesteps are not too expensive.  All five schemes are run with the same set of eleven time steps:
-
-\begin{center}
-\begin{tabular}{ll}
-    \textbf{Parameter} & \textbf{Values} \\
-    \hline
-    $\Delta t$ & $1.5 {\times} 10^{-1}$, $10^{-1}$, $5 {\times} 10^{-2}$, ... , $10^{-3}$, $5 {\times} 10^{-4}$, $10^{-4}$, $5 {\times} 10^{-5}$ \\
-\end{tabular}
-\end{center}
+\[ \Delta t \text{ in }  1.5 {\times} 10^{-1},\, 10^{-1},\, 5 {\times} 10^{-2},\, 2 {\times} 10^{-2},\, 10^{-2},\, 5 \times 10^{-3},\, 2 \times 10^{-3},\, 10^{-3},\, 5 {\times} 10^{-4},\, 10^{-4},\, 5 {\times} 10^{-5} \]
 
 \noindent For the two conditionally stable schemes (Forward Euler and explicit Newmark), the CFL condition is enforced and runs that violate it are ignored. The sweep is driven by the Python script \texttt{dissipation\_dispersion\_sweep.py}, which logs at every time step the discrete energy and the numerical solution at the domain centre.
 

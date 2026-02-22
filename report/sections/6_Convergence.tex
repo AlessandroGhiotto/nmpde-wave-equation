@@ -6,7 +6,7 @@ Under the standard \emph{a priori} error estimate for finite-element semi-discre
 \label{eq:error_bound}
 \|u(\cdot,t_n) - u_h^n\| \;\leq\; C\bigl(h^{s} + \Delta t^{q}\bigr),
 \end{equation}
-where $s$ denotes the spatial convergence order ($r{+}1$ in the $L^2$ norm, $r$ in the $H^1$ norm for polynomial degree~$r$) and $q$ is the temporal convergence order of the time-stepping scheme.
+where $s$ denotes the spatial convergence order ($r{+}1$ in the $L^2$ norm, $r$ in the $H^1$ norm for polynomial degree~$r$) and $q$ is the temporal convergence order of the time-stepping scheme, see \cite{Bradji2014, Karaa2011}.
 The purpose of this section is to verify \eqref{eq:error_bound} numerically by performing a systematic convergence study on a test problem with a known analytical solution. The Python script \texttt{convergence\_sweep.py} automates a grid search over all combinations of scheme, mesh size, polynomial degree, and time step, collecting the final relative errors produced by each run.
 
 \subsection{Test Problem}
@@ -25,31 +25,41 @@ whose exact solution is $u_{\mathrm{exact}}(\mathbf{x},t) = \cos \bigl(\sqrt{2}\
 
 \subsection{Sweep Parameters}
 
-The convergence sweep explores the following parameter grid:
+The convergence sweep explores the parameter grid reported in Table~\ref*{tab:conv_params}.
 
-\begin{center}
-\begin{tabular}{ll}
-\textbf{Parameter} & \textbf{Values} \\
-\hline
-Mesh elements per side $N_{\mathrm{el}}$ & 10, 20, 40, 80, 160, 320 \\
-FE polynomial degree $r$ & 1, 2 \\
-Time step $\Delta t$ & $10^{-1}$, $5 {\times} 10^{-2}$, \ldots, $10^{-4}$ \quad (10 values) \\
-\end{tabular}
-\end{center}
+\begin{table}[htbp]
+    \centering
+    \caption{Parameter grid used in the convergence sweep.}
+    \label{tab:conv_params}
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Parameter} & \textbf{Values} \\
+        \midrule
+        Mesh elements per side $N_{\mathrm{el}}$ & 10, 20, 40, 80, 160, 320 \\
+        FE polynomial degree $r$ & 1, 2 \\
+        Time step $\Delta t$ & $10^{-1}$, $5 \times 10^{-2}$, \ldots, $10^{-4}$ (10 values) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
-\noindent Five schemes are tested:
+\noindent The five schemes which are tested are reported in Table~\ref*{tab:conv_schemes}.
 
-\begin{center}
-\begin{tabular}{llcc}
-\textbf{Scheme} & \textbf{Parameters} & \textbf{Temporal order} & \textbf{Stability} \\
-\hline
-$\theta$-method (FE) & $\theta = 0$ & 1 & Conditional \\
-$\theta$-method (CN) & $\theta = 0.5$ & 2 & Unconditional \\
-$\theta$-method (BE) & $\theta = 1$ & 1 & Unconditional \\
-Newmark (explicit) & $\beta = 0,\; \gamma = \tfrac{1}{2}$ & 2 & Conditional \\
-Newmark (implicit) & $\beta = \tfrac{1}{4},\; \gamma = \tfrac{1}{2}$ & 2 & Unconditional \\
-\end{tabular}
-\end{center}
+\begin{table}[htbp]
+    \centering
+    \caption{All the time discretizations schemes tested.}
+    \label{tab:conv_schemes}
+    \begin{tabular}{llcc}
+        \toprule
+        \textbf{Scheme} & \textbf{Parameters} & \textbf{Temporal order} & \textbf{Stability} \\
+        \midrule
+        $\theta$-method (FE) & $\theta = 0$ & 1 & Conditional \\
+        $\theta$-method (CN) & $\theta = 0.5$ & 2 & Unconditional \\
+        $\theta$-method (BE) & $\theta = 1$ & 1 & Unconditional \\
+        Newmark (explicit) & $\beta = 0,\; \gamma = \tfrac{1}{2}$ & 2 & Conditional \\
+        Newmark (implicit) & $\beta = \tfrac{1}{4},\; \gamma = \tfrac{1}{2}$ & 2 & Unconditional \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \noindent For the two conditionally stable schemes (Forward Euler and explicit Newmark), the sweep script automatically filters out $(N_{\mathrm{el}}, \Delta t)$ combinations that violate the CFL condition. Runs that produce relative errors above $10^5$ are flagged as diverged and excluded from the analysis. The total sweep comprises 490 solver runs.
 

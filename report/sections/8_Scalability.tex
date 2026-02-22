@@ -15,7 +15,8 @@ All tests were executed on the Students Cluster of the Mathematics Department at
 We use \textbf{OpenMPI} with \texttt{--bind-to core --map-by socket} binding and set \texttt{OMP\_NUM\_THREADS=1} to prevent hyper-threading.  Each PBS job requests 16 CPUs on a \emph{single node}; the process counts $p \in \{1, 2, 4, 8, 16\}$ are swept sequentially within the same job.
 
 \paragraph{Methodology.}
-For each $({\mathrm{scheme}},\, p)$ configuration we perform 3~repeat runs and retain the \emph{minimum} wall time as the representative measurement. The code is copied and executed on \texttt{/scratch\_local}, which is fast node-local temporary storage.  The sweep is automated by the Python script \texttt{scalability\_sweep.py}.
+For each $({\mathrm{scheme}},\, p)$ configuration we perform 3~repeat runs and retain the \emph{minimum} wall time as the representative measurement. The code is copied and executed on \texttt{/scratch\_local}, which is fast node-local temporary storage.  The sweep is automated by the Python script \\
+\texttt{scalability\_sweep.py}.
 
 \subsection{Metrics}
 
@@ -37,19 +38,21 @@ Ideal (linear) scaling corresponds to $S(p) = p$ and $E(p) = 1$.
     \label{fig:scalability}
 \end{figure}
 
-\begin{table}[ht]
-\centering
-\begin{tabular}{lrrrrr}
-    \textbf{Scheme} & $T(1)$ [s] & $T(16)$ [s] & $S(16)$ & $E(16)$ \\
-    \hline
-    FE ($\theta = 0$)           & 668.5 & 58.0 & 11.52 & 0.72 \\
-    CN ($\theta = 0.5$)         & 624.9 & 55.0 & 11.37 & 0.71 \\
-    BE ($\theta = 1$)           & 624.9 & 54.6 & 11.44 & 0.72 \\
-    Newmark ($\beta = 0$)             & 330.2 & 31.3 & 10.53 & 0.66 \\
-    Newmark ($\beta = 0.25$)          & 296.3 & 27.6 & 10.75 & 0.67 \\
-\end{tabular}
-\caption{Strong scaling summary at $p = 16$ MPI processes.  $T(1)$ and $T(16)$ are the best wall times (minimum over 3 repeats).}
-\label{tab:scalability_summary}
+\begin{table}[htbp]
+    \centering
+    \caption{Strong scaling summary at $p = 16$ MPI processes.  $T(1)$ and $T(16)$ are the best wall times (minimum over 3 repeats).}
+    \label{tab:scalability_summary}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        \textbf{Scheme} & $T(1)$ [s] & $T(16)$ [s] & $S(16)$ & $E(16)$ \\
+        \midrule
+        FE ($\theta = 0$)           & 668.5 & 58.0 & 11.52 & 0.72 \\
+        CN ($\theta = 0.5$)         & 624.9 & 55.0 & 11.37 & 0.71 \\
+        BE ($\theta = 1$)           & 624.9 & 54.6 & 11.44 & 0.72 \\
+        Newmark ($\beta = 0$)             & 330.2 & 31.3 & 10.53 & 0.66 \\
+        Newmark ($\beta = 0.25$)          & 296.3 & 27.6 & 10.75 & 0.67 \\
+        \bottomrule
+    \end{tabular}
 \end{table}
 
 The main observations are:

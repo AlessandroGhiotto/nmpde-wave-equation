@@ -31,6 +31,7 @@
 
 # pdf
 /report/report.pdf
+/presentation/presentation.pdf
 
 # docsy generated tex
 /docs/latex
@@ -449,5 +450,3 @@ $RECYCLE.BIN/
 ### Doxygen ###
 html
 
-
-*.pdf

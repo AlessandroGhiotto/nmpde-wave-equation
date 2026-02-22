@@ -21,7 +21,7 @@ The $\theta$-method is applied to this first-order system, while the Newmark-$\b
 \subsection{The \texorpdfstring{$\theta$}{θ}-Method}
 \label{subsec:theta_method}
 
-We discretize \eqref{eq:first_order_system} with a one-parameter family of schemes controlled by $\theta \in [0,1]$ \cite{quarteroni2008numerical}. The time derivatives are replaced by finite differences over a step $\Delta t>0$, and the right-hand side terms are weighted between $t^n$ and $t^{n+1}$, where $t^k = k \Delta t$:
+We discretize \eqref{eq:first_order_system} with a one-parameter family of schemes controlled by $\theta \in [0,1]$, see \cite{quarteroni2008numerical}. The time derivatives are replaced by finite differences over a step $\Delta t>0$, and the right-hand side terms are weighted between $t^n$ and $t^{n+1}$, where $t^k = k \Delta t$:
 
 \begin{equation}
     \label{eq:theta_u}
