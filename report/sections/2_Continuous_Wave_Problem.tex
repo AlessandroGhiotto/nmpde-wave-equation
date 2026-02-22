@@ -15,15 +15,17 @@ We consider a bounded domain $\Omega \subset \mathbb{R}^2$. The wave propagation
     \end{cases}
 \end{equation}
 
-Here $c(\mathbf{x}, t)$ is the wave speed (possibly depending on space and time), $f$ is an external forcing term, $u_0$ and $v_0$ are the initial displacement and velocity, and $\phi$ prescribes the Dirichlet boundary condition on $\partial \Omega$ for all $t \in [0, T]$.
+Here $c$ represents the wave speed (eventually depending on space and time), $f$ is an external forcing term, $u_0$ and $v_0$ are the initial displacement and velocity, and $\phi$ prescribes the Dirichlet boundary condition on $\partial \Omega$ for all $t \in [0, T]$.
 
 \subsection{Weak Formulation}
 
-To apply the Finite Element Method (FEM) we need the weak formulation of the problem. We define the test space $V = H^1_0(\Omega) = \{v \in H^1(\Omega) : v = 0 \text{ in } \partial\Omega\}$, which consists of functions wich are zero on the boundary. The solution $u$ lives in the space $V_\phi = \{v \in H^1(\Omega) : v = \phi \text{ in } \partial\Omega\}$.
+In order to apply the Finite Element Method (FEM), we need to write the weak formulation of the problem.\\
+We define the test space $V = H^1_0(\Omega) = \{v \in H^1(\Omega) : v = 0 \text{ in } \partial\Omega\}$, which consists of functions wich are zero on the boundary, whereas the solution $u$ lives in the space $V_\phi = \{v \in H^1(\Omega) : v = \phi \text{ in } \partial\Omega\}$.
 
 \vspace{0.5cm}
 To ensure compatibility with the Lax-Milgram Lemma \cite{quarteroni2008numerical}, we introduce a \textbf{lifting operator} $\mathcal{R}\phi \in V_\phi$. We then split the solution as
 \begin{equation}
+    \label{eq:solutionsplit}
     u(\mathbf{x}, t) = \hat{u}(\mathbf{x}, t) + \mathcal{R}\phi(\mathbf{x}, t),
 \end{equation}
 where $\hat{u} \in V$ is the new unknown, which has homogeneous Dirichlet boundary conditions.
@@ -36,7 +38,7 @@ Applying Green's formula to the diffusion term gives
 \begin{equation}
     \int_{\Omega} \partial_{tt} u \; v \, d\Omega + \int_{\Omega} c^2 \nabla u \cdot \nabla v \, d\Omega - \int_{\partial \Omega} (c^2 \nabla u \cdot \mathbf{n}) v \, d\gamma = \int_{\Omega} f v \, d\Omega, \qquad \forall v \in V.
 \end{equation}
-Because $v = 0$ on $\partial \Omega$, the boundary integral vanishes. Substituting $u = \hat{u} + \mathcal{R}\phi$ and using linearity, we get the weak formulation: 
+Because $v = 0$ on $\partial \Omega$, the boundary integral vanishes. Substituting \eqref{eq:solutionsplit}and using linearity, we get the weak formulation: 
 
 \begin{equation}
 \label{eq:weak_problem_lifting}
