@@ -19,7 +19,7 @@ Here $c(\mathbf{x}, t)$ is the wave speed (possibly depending on space and time)
 
 \subsection{Weak Formulation}
 
-To apply the Finite Element Method (FEM) we need the weak formulation of the problem. We define the test space $V = H^1_0(\Omega) = \{v \in H^1(\Omega) : v = 0 in \partial\Omega\}$, which consists of functions wich are zero on the boundary. The solution $u$ lives in the space $V_\phi = \{v \in H^1(\Omega) : v = \phi in \partial\Omega\}$.
+To apply the Finite Element Method (FEM) we need the weak formulation of the problem. We define the test space $V = H^1_0(\Omega) = \{v \in H^1(\Omega) : v = 0 \text{ in } \partial\Omega\}$, which consists of functions wich are zero on the boundary. The solution $u$ lives in the space $V_\phi = \{v \in H^1(\Omega) : v = \phi \text{ in } \partial\Omega\}$.
 
 \vspace{0.5cm}
 To ensure compatibility with the Lax-Milgram Lemma \cite{quarteroni2008numerical}, we introduce a \textbf{lifting operator} $\mathcal{R}\phi \in V_\phi$. We then split the solution as
@@ -42,7 +42,7 @@ Because $v = 0$ on $\partial \Omega$, the boundary integral vanishes. Substituti
 \label{eq:weak_problem_lifting}
 \begin{cases}
 \forall t \in (0,T), \text{ find } \hat{u}(t) \in V \text{ such that:} \\
-\int_{\Omega} \partial_{tt} \hat{u} \; v \, d\Omega + a(\hat{u}, v) = G(v) \quad \forall v \in V \\
+\int_{\Omega} \partial_{tt} \hat{u} \; v \, d\Omega + a(\hat{u}, v) = G(v) \qquad \forall v \in V \\
 \hat{u}(\mathbf{x},0) = u_0(\mathbf{x}) - \mathcal{R}\phi(\mathbf{x},0) \\
 \partial_t \hat{u}(\mathbf{x},0) = v_0(\mathbf{x}) - \partial_t \mathcal{R}\phi(\mathbf{x},0)
 \end{cases}

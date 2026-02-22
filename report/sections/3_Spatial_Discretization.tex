@@ -8,7 +8,7 @@ We apply the standard Galerkin method by introducing a finite-dimensional subspa
     \label{eq:discrete_weak_form}
     \begin{cases}
     \forall t \in (0,T), \text{ find } u_h(t) \in V_{h} \text{ such that:} \\
-    \int_{\Omega} \partial_{tt} u_h \; v_h \, d\Omega + a(u_h, v_h) = G(v_h) \quad \forall v_h \in V_{h} \\
+    \int_{\Omega} \partial_{tt} u_h \; v_h \, d\Omega + a(u_h, v_h) = G(v_h) \qquad \forall v_h \in V_{h} \\
     u_h(\mathbf{x},0) = u_{0,h}(\mathbf{x}) \\
     \partial_t u_h(\mathbf{x},0) = v_{0,h}(\mathbf{x})
     \end{cases}
@@ -23,7 +23,7 @@ Let $\{\varphi_j\}_{j=1}^{N_h}$ be a basis of shape functions for the space $V_{
 
 where the coefficients $u_j(t)$ are the degrees of freedom (DoFs). Plugging this into the weak form and using as test function $v$ the shape functions $\varphi_i$ gives
 \begin{equation}
-    \sum_{j=1}^{N_h} \frac{d^2 u_j(t)}{dt^2} \int_{\Omega} \varphi_j \varphi_i \, d\Omega + \sum_{j=1}^{N_h} u_j(t) \int_{\Omega} c^2 \nabla \varphi_j \cdot \nabla \varphi_i \, d\Omega = {G}_i(t),\qquad i=1,..., N_h.
+    \sum_{j=1}^{N_h} \frac{d^2 u_j}{dt^2}(t) \int_{\Omega} \varphi_j \varphi_i \, d\Omega + \sum_{j=1}^{N_h} u_j(t) \int_{\Omega} c^2 \nabla \varphi_j \cdot \nabla \varphi_i \, d\Omega = {G}_i(t),\qquad i=1,..., N_h.
 \end{equation}
 
 We can now define the global matrices and semi-discretized vectors:
