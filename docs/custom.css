@@ -1,0 +1,9 @@
+.centered-table {
+    display: flex;
+    justify-content: center;
+}
+
+.centered-table>table.markdownTable {
+    width: auto;
+    /* prevent the table from stretching to 100 % */
+}
