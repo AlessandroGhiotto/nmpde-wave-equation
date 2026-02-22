@@ -2,7 +2,7 @@
 \section{Spatial Discretization}
 \label{sec:spatial_discretization}
 
-We apply the standard Galerkin method by introducing a finite-dimensional subspace $V_{h} \subset V$ with $\dim(V_{h}) = N_h < +\infty$. The semi-discretized problem that we obtain is the following:
+We apply the standard Galerkin method by introducing a finite-dimensional subspace $V_{h} \subset V$ such that $\dim(V_{h}) = N_h < +\infty$.\\The semi-discretized problem that we obtain is the following:
 
 \begin{equation}
     \label{eq:discrete_weak_form}
@@ -46,7 +46,7 @@ The resulting semi-discrete dynamical system is:
 \end{cases}
 \end{equation}
 
-This is a second-order ODE system in time, called the semi-discrete form of the wave equation. 
+This is a second-order Ordinary Differential Equation (ODE) system in time, called the semi-discrete form of the wave equation. 
 
 %In the presence of non-homogeneous Dirichlet conditions, the solver modifies this system during the solution phase to ensure that the degrees of freedom on the boundary correctly reflect the prescribed data $g(\mathbf{x},t)$.
 
