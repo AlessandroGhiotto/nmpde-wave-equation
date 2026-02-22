@@ -24,7 +24,6 @@ $$
 on a rectangular domain $\Omega$ with simplicial (triangular) elements, built using [deal.II](https://www.dealii.org/), exploiting Trilinos and MPI
 parallelism.
 
-
 ## Implemented Time-Integration Families
 
 <div align="center">
@@ -59,8 +58,21 @@ nmpde-wave-equation/
 ├── analysis/             # Jupyter notebooks for post-processing
 ├── results/              # simulation output (VTU, CSV) — git-ignored
 ├── build/                # CMake build directory — git-ignored
+├── docs/                 # Docsygen documentation
+├── presentation/         # LaTeX presentation
 └── report/               # LaTeX report
 ```
+
+### Documentation
+
+To get the automatically generated Doygen documentation:
+
+```bash
+cd docs/
+./generate-docs.sh
+```
+
+Then open the file `docs/html/index.html` in you favorite browser.
 
 ---
 
