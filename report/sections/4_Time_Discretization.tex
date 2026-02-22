@@ -18,7 +18,7 @@ A standard approach \cite{quarteroni2008numerical} is to rewrite \eqref{eq:semi_
 % On the boundary nodes, if $\mathbf{u}(t) = \phi(t)$ then $\mathbf{v}(t) = \partial_t \phi(t)$. 
 The $\theta$-method is applied to this first-order system, while the Newmark-$\beta$ method works directly on the second-order form~\eqref{eq:semi_discrete_system}.
 
-\subsection{The $\theta$-Method}
+\subsection{The \texorpdfstring{$\theta$}{θ}-Method}
 \label{subsec:theta_method}
 
 We discretize \eqref{eq:first_order_system} with a one-parameter family of schemes controlled by $\theta \in [0,1]$ \cite{quarteroni2008numerical}. The time derivatives are replaced by finite differences over a step $\Delta t>0$, and the right-hand side terms are weighted between $t^n$ and $t^{n+1}$, where $t^k = k \Delta t$:

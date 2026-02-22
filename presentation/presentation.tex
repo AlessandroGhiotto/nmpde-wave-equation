@@ -1,0 +1,520 @@
+\documentclass[aspectratio=169]{beamer}
+
+% --- STILE PULITO E MINIMALE ---
+\usetheme{Boadilla}
+\usefonttheme{professionalfonts}
+\setbeamertemplate{navigation symbols}{} % Rimuove i fastidiosi bottoncini in basso
+
+% --- COLORI POLITECNICO DI MILANO ---
+\definecolor{PoliBlue}{RGB}{20, 43, 104}
+\definecolor{PoliRed}{RGB}{237, 28, 36}
+
+\setbeamercolor{structure}{fg=PoliBlue}
+\setbeamercolor{title}{fg=PoliBlue}
+\setbeamercolor{frametitle}{fg=PoliBlue}
+\setbeamercolor{item}{fg=PoliRed}
+\setbeamercolor{block title}{bg=PoliBlue, fg=white}
+\setbeamercolor{block body}{bg=PoliBlue!10, fg=black}
+
+\usepackage{amsmath, amssymb, graphicx, booktabs, tikz}
+
+% --- DATI INTESTAZIONE ---
+\title[Wave Equation Solvers]{Numerical Solvers for the Wave Equation}
+\subtitle{NMPDE project}
+\author[Di Lauro, Fabbris, Ghiotto, Rubbi]{R. Di Lauro, T. Fabbris, A. Ghiotto, C. Rubbi}
+\institute[PoliMi]{Politecnico di Milano}
+\date{February 2026}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{Outline}
+    \tableofcontents
+\end{frame}
+
+\section{Theoretical framework}
+\subsection{Strong and Weak formulation}
+\subsection{Spatial Discretization}
+\subsection{Time Discretization: \texorpdfstring{$\theta$}{θ} method}
+\subsection{Time Discretization: Newmark method}
+\section{Results Analysis}
+\subsection{Test Problem}
+\subsection{Convergence}
+\subsection{Dissipation and Dispersion}
+\subsection{Scalability}
+% \section{Appendix}
+
+% --- SLIDE DI TRANSIZIONE: RESULTS ANALYSIS ---
+\begin{frame}[plain, c] % 'plain' rimuove testata/piè di pagina, 'c' centra tutto
+    \centering
+    \huge \textcolor{PoliBlue}{\textbf{}} \\
+    \vspace{0.5cm}
+    \Huge \textcolor{PoliBlue}{\textbf{Theoretical framework}}
+\end{frame}
+
+
+\begin{frame}{Strong Formulation \& Spaces}
+    \begin{block}{Governing Equation} 
+        Let $\Omega \subset \mathbb{R}^2$
+    \begin{equation*}
+        \begin{cases}
+        \partial_{tt} u - c^2 \Delta u = f & \text{in } \Omega \times (0, T] \\
+        u = u_0, \quad \partial_t u = v_0 & \text{in } \Omega \text{ at } t=0 \\
+        u = \phi & \text{on } \partial\Omega \times (0, T]
+        \end{cases}
+    \end{equation*}
+    \end{block}
+
+    \vspace{0.4cm}
+    \textbf{Functional Spaces}
+    \begin{itemize}
+        \item Solution space: $V_\phi = \{ v \in H^1(\Omega) : v = \phi \text{ on } \partial\Omega \}$
+        \item Test space: $V = H^1_0(\Omega) = \{ v \in H^1(\Omega) : v = 0 \text{ on } \partial\Omega \}$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Weak Formulation}
+    Let $\mathcal{R}_\phi \in V_\phi$ be a lifting operator, then we decompose the solution as $u = \hat{u} + \mathcal{R}_\phi$.
+
+    \vspace{0.3cm}
+        \begin{block}{Variational Problem}
+        Find $\hat{u}(t) \in V$ with $\hat{u}(0) = u_0 - \mathcal{R}_\phi(0)$ and $\partial_t \hat{u}(0) = v_0 - \partial_t \mathcal{R}_\phi(0)$, such that:
+        \begin{equation*}
+        {\color{PoliRed} \int_{\Omega} \partial_{tt} \hat{u} \; v \, d\Omega} + a(\hat{u}, v) = G(v) \qquad \forall v \in V
+        \end{equation*}
+        \end{block}
+    \vspace{0.3cm}
+    where:
+    \begin{itemize}
+        \item \textbf{Stiffness form:} $a(\hat{u},v) = \int_{\Omega} c^2 \nabla \hat{u} \cdot \nabla v \, d\Omega$
+        \item \textbf{RHS:} $G(v) = \int_{\Omega} f v \, d\Omega - \int_{\Omega} \partial_{tt} \mathcal{R}_\phi \; v \, d\Omega - a(\mathcal{R}_\phi, v)$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Spatial Discretization}
+    \textbf{FEM Approximation:} let $V_{h} \subset V$ with $\dim(V_{h}) = N_h < +\infty$ and $\{\varphi_j\}_{j=1}^{N_h}$ be a basis for $V_h$, then:
+    \begin{equation*}
+    u_h(\mathbf{x}, t) = \sum_{j=1}^{N_h} u_j(t) \varphi_j(\mathbf{x})
+    \end{equation*}
+    
+    % \vspace{0.1cm}
+    \begin{block}{Semi-Discrete Dynamical System}
+    \vspace{-0.1cm}
+    \begin{equation*}
+    \mathbf{M} \, \partial_{tt} \mathbf{u}(t) + \mathbf{A} \, \mathbf{u}(t) = \mathbf{G}(t)
+    \end{equation*}
+    \end{block}
+    
+    \vspace{0.2cm}
+    \textbf{Algebraic Components:}
+    \begin{itemize}
+        \item \textbf{Mass matrix:} $M_{ij} = \int_{\Omega} \varphi_j \varphi_i \, d\Omega$
+        \item \textbf{Stiffness matrix:} $A_{ij} = \int_{\Omega} c^2 \nabla \varphi_j \cdot \nabla \varphi_i \, d\Omega$
+        \item \textbf{Load vector:} $\mathbf{G}_i(t)$ includes forcing and lifting terms.
+    \end{itemize}
+\end{frame}
+\begin{frame}{Time Discretization: $\theta$-Method}
+    \textbf{First-Order Reduction:} introduce $\mathbf{v}(t) = \partial_t \mathbf{u}(t)$ and apply a $\theta$-weighted scheme ($\theta \in [0,1]$):
+    
+    \vspace{0.15cm}
+    \begin{block}{$\theta$-Discretization}
+    \vspace{-0.2cm}
+    \begin{gather*}
+    \frac{\mathbf{u}^{n+1} - \mathbf{u}^n}{\Delta t} = \theta\, \mathbf{v}^{n+1} + (1-\theta)\, \mathbf{v}^n \\[4pt]
+    \mathbf{M}\, \frac{\mathbf{v}^{n+1} - \mathbf{v}^n}{\Delta t} + \mathbf{A} \bigl( \theta\, \mathbf{u}^{n+1} + (1-\theta)\, \mathbf{u}^n \bigr) = \mathbf{G}_{\theta}^{n+1}
+    \end{gather*}
+    \end{block}
+
+    \vspace{0.1cm}
+    Rearranging and substituting yields the SPD system for $\mathbf{u}^{n+1}$:
+    \begin{equation*}
+    (\mathbf{M} + \theta^2 \Delta t^2 \mathbf{A})\, \mathbf{u}^{n+1} = \mathbf{M}(\mathbf{u}^n + \Delta t\, \mathbf{v}^n) - \Delta t^2\, \theta(1{-}\theta)\, \mathbf{A}\, \mathbf{u}^n + \Delta t^2\, \theta\, \mathbf{G}_{\theta}^{n+1}
+    \end{equation*}
+
+    \vspace{0.1cm}
+    At each step we solve \textbf{two SPD systems} sequentially:
+    \begin{enumerate}\itemsep0pt
+        \item Solve for $\mathbf{u}^{n+1}$ %(RHS depends only on $t^n$ quantities).
+        \item Solve $\mathbf{M}\,\mathbf{v}^{n+1} = \ldots$ using the just-computed $\mathbf{u}^{n+1}$.
+    \end{enumerate}
+    $\theta = 0$: Forward Euler \quad $\theta = 1/2$: Crank--Nicolson \quad $\theta = 1$: Backward Euler
+\end{frame}
+
+\begin{frame}{Time Discretization: Newmark Method}
+    \textbf{Direct second-order integration} with parameters $\beta$ and $\gamma$. The displacement and velocity are updated via the acceleration $\mathbf{a} \approx \partial_{tt} \mathbf{u}$:
+    
+    \vspace{0.15cm}
+    \begin{block}{Newmark Updates}
+    \vspace{-0.2cm}
+    \begin{gather*}
+    \mathbf{u}^{n+1} = \mathbf{u}^n + \Delta t\, \mathbf{v}^n + \Delta t^2 \bigl[ \bigl(\tfrac{1}{2} - \beta\bigr)\mathbf{a}^n + \beta\, \mathbf{a}^{n+1} \bigr] \\[4pt]
+    \mathbf{v}^{n+1} = \mathbf{v}^n + \Delta t \bigl[ (1 - \gamma)\mathbf{a}^n + \gamma\, \mathbf{a}^{n+1} \bigr]
+    \end{gather*}
+    \end{block}
+
+    \vspace{0.1cm}
+    Requiring $\mathbf{M}\mathbf{a}^{n+1} + \mathbf{A}\mathbf{u}^{n+1} = \mathbf{G}^{n+1}$ and substituting yields \textbf{one SPD system}:
+    \begin{equation*}
+    (\mathbf{M} + \Delta t^2 \beta\, \mathbf{A})\,\mathbf{a}^{n+1} = \mathbf{G}^{n+1} - \mathbf{A}\mathbf{u}^n - \Delta t\, \mathbf{A}\mathbf{v}^n - \Delta t^2 \bigl(\tfrac{1}{2} - \beta\bigr) \mathbf{A}\mathbf{a}^n
+    \end{equation*}
+
+    \vspace{0.1cm}
+    Then $\mathbf{u}^{n+1}$ and $\mathbf{v}^{n+1}$ are updated algebraically. Notable choices:
+    \begin{itemize}\itemsep0pt
+        \item $\gamma = 1/2,\; \beta = 1/4$: \textbf{Average Acceleration} %(unconditionally stable, non-dissipative).
+        \item $\gamma = 1/2,\; \beta = 0$: \textbf{Central Difference} %(explicit, conditionally stable).
+    \end{itemize}
+\end{frame}
+
+
+
+% ==========================================
+% SECTION 3: RESULTS ANALYSIS
+% ==========================================
+
+% --- SLIDE DI TRANSIZIONE: RESULTS ANALYSIS ---
+\begin{frame}[plain, c] % 'plain' rimuove testata/piè di pagina, 'c' centra tutto
+    \centering
+    \huge \textcolor{PoliBlue}{\textbf{}} \\
+    \vspace{0.5cm}
+    \Huge \textcolor{PoliBlue}{\textbf{Results Analysis}}
+\end{frame}
+
+\begin{frame}{Solution Examples}
+    Three simulations with different problem data:
+    \vspace{0.3cm}
+    \begin{columns}[T]
+        \column{0.33\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/sol-square.png}\\[4pt]
+        {\small Square wave}
+        \column{0.33\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/sol-standing.png}\\[4pt]
+        {\small Standing wave}
+        \column{0.33\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/sol-traveling.png}\\[4pt]
+        {\small Traveling wave}
+    \end{columns}
+
+    \vspace{0.5cm}
+    Videos of the simulations are available in this \href{https://www.youtube.com/playlist?list=PLh9fwY76Oobay4rXdlAKkHKuC61a1lL61}{YouTube playlist}
+\end{frame}
+
+\begin{frame}{Test Problem}
+    \textbf{Domain:} Unit square $\Omega = [0,1]^2$, final time $T = 1$.
+
+    \begin{block}{Standing-Mode Wave}
+    \vspace{-0.1cm}
+    \begin{equation*}
+    \begin{cases}
+    \partial_{tt} u - \Delta u = 0 & \text{in } \Omega \times (0, T] \\[6pt]
+    u = 0 & \text{on } \partial\Omega \times [0, T] \\[6pt]
+    u(\mathbf{x}, 0) = \sin(\pi x)\sin(\pi y) & \text{in } \Omega \\[6pt]
+    \partial_t u(\mathbf{x}, 0) = 0 & \text{in } \Omega
+    \end{cases}
+    \end{equation*}
+    \end{block}
+
+
+\vspace{0.3cm}
+    \textbf{Exact Analytical Solution:}
+    \begin{equation*}
+    u_{\text{exact}}(\mathbf{x}, t) = \cos(\sqrt{2}\pi t) \sin(\pi x)\sin(\pi y)
+    \end{equation*}
+    
+    \vspace{0.1cm}
+    \textbf{Exact Angular Frequency:} 
+    \begin{equation*}
+    \omega_{\text{exact}} = \sqrt{2}\pi
+    \end{equation*}
+    
+\end{frame}
+
+
+\begin{frame}[plain, c]
+    \centering
+    \huge \textcolor{PoliBlue}{\textbf{}} \\
+    \vspace{0.5cm}
+    \Huge \textcolor{PoliBlue}{\textbf{Convergence}} \\
+    \vspace{0.8cm}
+    
+\end{frame}
+
+\begin{frame}{Convergence Analysis: Sweep Parameters}
+    \textbf{Parameter Grid (490 total runs)}
+    \begin{table}
+        \centering
+        \begin{tabular}{ll}
+        \toprule
+        \textbf{Parameter} & \textbf{Values} \\
+        \midrule
+        Elements per side $N_{\text{el}}$ & 10, 20, 40, 80, 160, 320 \\
+        FE polynomial degree $r$ & 1, 2 \\
+        Time step $\Delta t$ & $10^{-1}, 5 \times 10^{-2}, \dots, 10^{-4}$ (10 values) \\
+        \bottomrule
+        \end{tabular}
+    \end{table}
+
+    \textbf{Tested Time-Stepping Schemes}
+    \begin{table}
+        \centering
+        \begin{tabular}{llcc}
+        \toprule
+        \textbf{Scheme} & \textbf{Parameters} & \textbf{Accuracy} & \textbf{Stability} \\
+        \midrule
+        $\theta$-method (FE) & $\theta = 0$ & $\mathcal{O}(\Delta t)$ & Conditional \\
+        $\theta$-method (CN) & $\theta = 0.5$ & $\mathcal{O}(\Delta t^2)$ & Unconditional \\
+        $\theta$-method (BE) & $\theta = 1$ & $\mathcal{O}(\Delta t)$ & Unconditional \\
+        Newmark (explicit) & $\beta=0,\; \gamma=0.5$ & $\mathcal{O}(\Delta t^2)$ & Conditional \\
+        Newmark (implicit) & $\beta=0.25,\; \gamma=0.5$ & $\mathcal{O}(\Delta t^2)$ & Unconditional \\
+        \bottomrule
+        \end{tabular}
+    \end{table}
+
+    % \begin{itemize}
+    %     \item \textbf{CFL Compliance:} Explicit schemes were automatically filtered using a safety factor of $0.9$.
+    % \end{itemize}
+\end{frame}
+
+\begin{frame}{Convergence Analysis: A Priori Estimate}
+    \begin{block}{Theoretical Error Bound}
+    The total numerical error at time $t_n$ is bounded by the sum of spatial and temporal contributions:
+    \begin{equation*}
+    \|u(\cdot,t_n) - u_h^n\| \;\leq\; C\bigl(h^{s} + \Delta t^{q}\bigr)
+    \end{equation*}
+    \end{block}
+    
+    \vspace{0.4cm}
+    \textbf{Expected Convergence Rates:}
+    \begin{itemize}
+        \item \textbf{Spatial order ($s$):} 
+        \begin{itemize}
+            \item $s = r+1$ for the $L^2$-norm error.
+            \item $s = r$ for the $H^1$-norm error.
+        \end{itemize}
+        \item \textbf{Temporal order ($q$):} $q \in \{1, 2\}$, as defined for each scheme.
+    \end{itemize}
+    \end{frame}
+    
+\begin{frame}{Spatial Convergence: Backward Euler ($\theta = 1$)}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_theta_1_h_r1_2.png}
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Plateau Effect:} For $r=2$, the $L^2$ error is bounded by $C(h^3 + \Delta t)$, causing an early stall in convergence.
+        \item The 1st-order temporal error dominates quickly as the mesh is refined ($h \to 0$).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Spatial Convergence: Crank-Nicolson ($\theta = 0.5$)}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_theta_05_h_r1_2.png}
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Improved Accuracy:} The error is bounded by $C(h^s + \Delta t^2)$, allowing for a wider range of visible spatial rates.
+        \item Spatial curves collapse onto each other for small $\Delta t$, indicating the pure spatial rate is correctly captured.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Temporal Convergence: Backward Euler ($\theta = 1$)}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_theta_1_dt_r1_2.png} % Esempio BE
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Linear Rate:} Forward Euler ($\theta=0$) and Backward Euler ($\theta=1$) confirm the expected $\mathcal{O}(\Delta t)$ asymptotic behavior.
+        \item \textbf{Spatial Plateau:} For small $\Delta t$, the error stops decreasing as it becomes dominated by the mesh size $h$.
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Temporal Convergence: Cranck-Nicolson ($\theta = 0.5$)}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_theta_05_dt_r1_2.png} % Esempio CN
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Quadratic Rate:} Crank-Nicolson and Newmark variants ($\gamma=0.5$) exhibit a much faster error reduction, following $\mathcal{O}(\Delta t^2)$.
+        \item \textbf{Efficiency:} High-order temporal schemes allow for larger time steps while maintaining a precision comparable to the spatial discretization.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[plain, c]
+    \centering
+    \huge \textcolor{PoliBlue}{\textbf{}} \\
+    \vspace{0.5cm}
+    \Huge \textcolor{PoliBlue}{\textbf{Dissipation and Dispersion}} \\
+    \vspace{0.8cm}
+    
+\end{frame}
+
+\begin{frame}{Numerical Dissipation: Energy Evolution}
+    \centering
+    % Carica il file nella colonna a sinistra per risolvere l'errore "File not found"
+    \includegraphics[width=0.9\textwidth]{images/dissdisp_energy_evolution.png} 
+    
+    \vspace{0.2cm}
+    The exact solution conserves energy, so the reference is $E(t)/E(0) = 1$.
+    \begin{itemize}
+        \item \textbf{Setup:} $T=5$ s , $N_{el}=60$, $r=1$.
+        \item \textbf{Energy-Conserving:} \textbf{CN} and \textbf{Implicit Newmark} preserve $E(t)/E(0) = 1$.
+        \item \textbf{Dissipative:} \textbf{BE} exhibits strong decay. For large $\Delta t$, the wave is almost entirely damped.
+        \item \textbf{Stability:} \textbf{FE} and \textbf{Explicit Newmark} are conservative within the CFL bound.
+    \end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{Numerical Dispersion: Point-Probe Analysis}
+    % \vspace{0.2cm}
+    \begin{columns}[T]
+        \column{0.55\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{images/dissdisp_probe_vs_exact.png}
+
+        \column{0.50\textwidth}
+        \textbf{Central Probe:} $u(0.5, 0.5, t) = \cos(\sqrt{2}\pi t)$ \\ 
+        Comparison of phase drift $\tilde{\omega} \neq \omega_{\text{exact}}$.
+        \begin{itemize}\itemsep6pt
+            \item \textbf{CN / Implicit Newmark:} No dissipation, but visible \textbf{phase lag} for large $\Delta t$.
+            \item \textbf{BE:} Highly dissipative + phase lag, unsuitable for long-time propagation.
+            \item \textbf{Explicit schemes:} when it doesn't diverge, it overlaps perfectly with the exact solution.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+
+\begin{frame}[plain, c]
+    \centering
+    \huge \textcolor{PoliBlue}{\textbf{}} \\
+    \vspace{0.5cm}
+    \Huge \textcolor{PoliBlue}{\textbf{Scalability}} \\
+    \vspace{0.8cm}
+    
+\end{frame}
+
+\begin{frame}{Strong Scaling Analysis}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/scalability_strong_scaling.png} 
+    
+    \vspace{0.1cm}
+    \begin{itemize}
+        \item \textbf{Setup:} $N_{el} = 640$ ($>400k$ DoFs), $\Delta t = 8 \cdot 10^{-5}$, $T=0.05$ (625 steps).
+        \item \textbf{Cluster Environment:} up to 16 MPI ranks on Intel Xeon Gold 6238R.
+        \item \textbf{Precision:} Processes pinned to physical cores (\texttt{--bind-to core}) with hyper-threading disabled (\texttt{OMP\_NUM\_THREADS=1}).
+        \item \textbf{I/O Optimization:} Execution on \texttt{/scratch\_local} for fast node-local storage.
+        \item \textbf{Results:} Speedup $S(16) \approx 11\times$ with parallel efficiency $E(16) \in [66\%, 72\%]$.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Computational Efficiency: $\theta$-methods vs. Newmark}
+    \begin{table}
+        \footnotesize
+        \centering
+        \begin{tabular}{lcccc}
+            \toprule
+            \textbf{Scheme} & $T(1)$ [s] & $T(16)$ [s] & $S(16)$ & $E(16)$ \\ \midrule
+            $\theta$-methods (FE, BE, CN) & $\sim 645$ & $\sim 56$ & $\approx 11.4$ & $72\%$ \\
+            Newmark ($\beta \in \{0, 0.25\}$) & $\sim 313$ & $\sim 29$ & $\approx 10.6$ & $67\%$ \\ \bottomrule
+        \end{tabular}
+        \caption{Strong scaling summary at $p=16$ MPI processes}
+    \end{table}
+
+    \begin{itemize}
+        \item \textbf{Throughput:} Newmark schemes are \textbf{twice as fast} as $\theta$-methods.
+        \item \textbf{Linear Solves:} $\theta$-methods solve two SPD systems per step ($\mathbf{u}^{n+1}, \mathbf{v}^{n+1}$); Newmark solves only one for $\mathbf{a}^{n+1}$.
+        \item \textbf{Parallel Trade-off:} Newmark's lower per-step cost makes non-parallelizable overhead more prominent, leading to slightly lower efficiency.
+    \end{itemize}
+\end{frame}
+
+
+
+
+\begin{frame}[plain, c] % 'plain' rimuove testata/piè di pagina, 'c' centra tutto
+    \centering
+    \huge \textcolor{PoliBlue}{\textbf{}} \\
+    \vspace{0.5cm}
+    \Huge \textcolor{PoliBlue}{\textbf{Thanks for you attention!}}
+\end{frame}
+
+
+% SLIDES BONUS
+
+\begin{frame}{Spatial Convergence: Forward Euler ($\theta = 0$)}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_theta_0_h_r1_2.png}
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{CFL Constraint:} Only stable combinations of $(h, \Delta t)$ are shown; the sweep script automatically filtered out unstable runs.
+        \item \textbf{1st Order Accuracy:} Similar to BE, the spatial convergence is limited by the $\mathcal{O}(\Delta t)$ temporal error.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Spatial Convergence: Newmark Explicit ($\beta = 0$)}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_newmark_000_h_r1_2.png}
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Second Order:} As a 2nd-order method in time, it allows for deeper spatial convergence before reaching the plateau.
+        \item \textbf{Stability:} Conditionally stable, requires adherence to the CFL condition.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Spatial Convergence: Newmark Implicit ($\beta = 0.25$)}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_newmark_025_h_r1_2.png}
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Unconditional Stability:} Combines the 2nd-order accuracy of CN with robust stability.
+        \item \textbf{High-Order Synergy:} Perfectly recovers $\mathcal{O}(h^3)$ for $r=2$ when $\Delta t$ is sufficiently small.
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Temporal Convergence: Forward Euler ($\theta = 0$)}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_theta_0_dt_r1_2.png}
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{CFL Limitation:} Only the stable portion of the sweep is visible; the scheme confirms $\mathcal{O}(\Delta t)$ accuracy within its stability region.
+        \item \textbf{Comparison:} Displays similar accuracy to Backward Euler but requires strictly small time steps to avoid divergence.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Temporal Convergence: Newmark Explicit}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_newmark_000_dt_r1_2.png}
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Second-Order Accuracy:} Confirms $\mathcal{O}(\Delta t^2)$ rate, providing a significant accuracy boost over the $\theta$-method (except for CN).
+        \item \textbf{Conditional Stability:} Stability is governed by the mesh size, requiring the automated filtering of the parameter grid.
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Temporal Convergence: Newmark Implicit}
+    \centering
+    \includegraphics[width=0.85\textwidth]{images/conv_newmark_025_dt_r1_2.png}
+    
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Robustness:} Combines unconditional stability with second-order temporal accuracy $\mathcal{O}(\Delta t^2)$.
+        \item \textbf{Optimal Performance:} Exhibits the best balance between stability and error reduction, especially for high-order spatial elements ($r=2$).
+    \end{itemize}
+\end{frame}
+
+
+
+\end{document}
