@@ -214,8 +214,8 @@
     \begin{cases}
     \partial_{tt} u - \Delta u = 0 & \text{in } \Omega \times (0, T] \\[6pt]
     u = 0 & \text{on } \partial\Omega \times [0, T] \\[6pt]
-    u(\mathbf{x}, 0) = \sin(\pi x)\sin(\pi y) & \text{in } \Omega \\[6pt]
-    \partial_t u(\mathbf{x}, 0) = 0 & \text{in } \Omega
+    u(x, y, 0) = \sin(\pi x)\sin(\pi y) & \text{in } \Omega \\[6pt]
+    \partial_t u(x, y, 0) = 0 & \text{in } \Omega
     \end{cases}
     \end{equation*}
     \end{block}
@@ -224,7 +224,7 @@
 \vspace{0.3cm}
     \textbf{Exact Analytical Solution:}
     \begin{equation*}
-    u_{\text{exact}}(\mathbf{x}, t) = \cos(\sqrt{2}\pi t) \sin(\pi x)\sin(\pi y)
+    u_{\text{exact}}(x, y, t) = \cos(\sqrt{2}\pi t) \sin(\pi x)\sin(\pi y)
     \end{equation*}
     
     \vspace{0.1cm}
@@ -449,31 +449,31 @@
 
 % SLIDES BONUS
 
-\begin{frame}{Explicit Newmark ($\beta=0$)}
+\begin{frame}[noframenumbering]{Explicit Newmark ($\beta=0$)}
     \centering
     \includegraphics[width=0.9\textwidth]{images/conv_newmark_025_dt_r1_2.png}
     \includegraphics[width=0.9\textwidth]{images/conv_newmark_025_h_r1_2.png} 
 \end{frame}
 
-\begin{frame}{Implicit Newmark ($\beta=0.25$)}
+\begin{frame}[noframenumbering]{Implicit Newmark ($\beta=0.25$)}
     \centering
     \includegraphics[width=0.9\textwidth]{images/conv_newmark_000_dt_r1_2.png}
     \includegraphics[width=0.9\textwidth]{images/conv_newmark_000_h_r1_2.png} 
 \end{frame}
 
-\begin{frame}{BE ($\theta=1.0$)}
+\begin{frame}[noframenumbering]{BE ($\theta=1.0$)}
     \centering
     \includegraphics[width=0.9\textwidth]{images/conv_theta_1_dt_r1_2.png}
     \includegraphics[width=0.9\textwidth]{images/conv_theta_1_h_r1_2.png} 
 \end{frame}
 
-\begin{frame}{CN ($\theta=0.5$)}
+\begin{frame}[noframenumbering]{CN ($\theta=0.5$)}
     \centering
     \includegraphics[width=0.9\textwidth]{images/conv_theta_05_dt_r1_2.png}
     \includegraphics[width=0.9\textwidth]{images/conv_theta_05_h_r1_2.png} 
 \end{frame}
 
-\begin{frame}{FE ($\theta=0.0$)}
+\begin{frame}[noframenumbering]{FE ($\theta=0.0$)}
     \centering
     \includegraphics[width=0.9\textwidth]{images/conv_theta_0_dt_r1_2.png}
     \includegraphics[width=0.9\textwidth]{images/conv_theta_0_h_r1_2.png} 
