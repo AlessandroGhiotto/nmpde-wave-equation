@@ -77,11 +77,11 @@
 \end{frame}
 
 \begin{frame}{Weak Formulation}
-    Let $\mathcal{R}_\phi \in V_\phi$ be a lifting operator, then we decompose the solution as $u = \hat{u} + \mathcal{R}_\phi$.
+    Let $\mathcal{R}\phi \in V_\phi$ be a lifting operator, then we decompose the solution as $u = \hat{u} + \mathcal{R}\phi$.
 
     \vspace{0.3cm}
         \begin{block}{Variational Problem}
-        Find $\hat{u}(t) \in V$ with $\hat{u}(0) = u_0 - \mathcal{R}_\phi(0)$ and $\partial_t \hat{u}(0) = v_0 - \partial_t \mathcal{R}_\phi(0)$, such that:
+        Find $\hat{u}(t) \in V$ with $\hat{u}(0) = u_0 - \mathcal{R}\phi(0)$ and $\partial_t \hat{u}(0) = v_0 - \partial_t \mathcal{R}\phi(0)$, such that:
         \begin{equation*}
         {\color{PoliRed} \int_{\Omega} \partial_{tt} \hat{u} \; v \, d\Omega} + a(\hat{u}, v) = G(v) \qquad \forall v \in V
         \end{equation*}
@@ -90,7 +90,7 @@
     where:
     \begin{itemize}
         \item \textbf{Stiffness form:} $a(\hat{u},v) = \int_{\Omega} c^2 \nabla \hat{u} \cdot \nabla v \, d\Omega$
-        \item \textbf{RHS:} $G(v) = \int_{\Omega} f v \, d\Omega - \int_{\Omega} \partial_{tt} \mathcal{R}_\phi \; v \, d\Omega - a(\mathcal{R}_\phi, v)$
+        \item \textbf{RHS:} $G(v) = \int_{\Omega} f v \, d\Omega - \int_{\Omega} \partial_{tt} \mathcal{R}\phi \; v \, d\Omega - a(\mathcal{R}\phi, v)$
     \end{itemize}
 \end{frame}
 
@@ -392,6 +392,39 @@
     \end{columns}
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}{Spectral Analysis}
+    \centering
+    % Limitiamo l'altezza dell'immagine per salvare spazio verticale
+    \includegraphics[width=\textwidth, height=0.55\textheight, keepaspectratio]{images/sinc_good.png} 
+    
+    \vspace{0.1cm}
+    
+    % Setup compatto
+    {\footnotesize \textbf{Test Setup:}  $\Delta t = 0.15$ s}
+    \vspace{0.1cm}
+    
+    \begin{columns}[T]
+        % --- Colonna Sinistra (CN e NM) ---
+        \column{0.48\textwidth}
+        \footnotesize 
+        \textbf{CN ($\theta=0.5$), Newmark ($\beta=0.25, \gamma=0.5$)}
+        \begin{itemize}\itemsep0pt 
+            % \item Both schemes preserve the high spectral amplitude ($3. \times 10^{-1}$).
+            \item \textbf{Frequency error:} $\Delta f = 0.024$ Hz
+        \end{itemize}
+        
+        % --- Colonna Destra (BE) ---
+        \column{0.48\textwidth}
+        \footnotesize
+        \textbf{Backward Euler ($\theta=1.0$)}
+        \begin{itemize}\itemsep0pt
+            % \item \textbf{Amplitude Collapse:} Drops by over an order of magnitude ($2.35 \times 10^{-2}$).
+            \item \textbf{Frequency error:} $\Delta f = 0.050$ Hz
+        \end{itemize}
+    \end{columns}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 
 \begin{frame}[plain, c]
     \centering
@@ -412,7 +445,7 @@
         \item \textbf{Cluster Environment:} up to 16 MPI ranks on Intel Xeon Gold 6238R.
         \item \textbf{Precision:} Processes pinned to physical cores (\texttt{--bind-to core}) with hyper-threading disabled (\texttt{OMP\_NUM\_THREADS=1}).
         \item \textbf{I/O Optimization:} Execution on \texttt{/scratch\_local} for fast node-local storage.
-        \item \textbf{Results:} Speedup $S(16) \approx 11\times$ with parallel efficiency $E(16) \in [66\%, 72\%]$.
+        % \item \textbf{Results:} Speedup $S(16) \approx 11\times$ with parallel efficiency $E(16) \in [66\%, 72\%]$.
     \end{itemize}
 \end{frame}
 
@@ -477,6 +510,76 @@
     \centering
     \includegraphics[width=0.9\textwidth]{images/conv_theta_0_dt_r1_2.png}
     \includegraphics[width=0.9\textwidth]{images/conv_theta_0_h_r1_2.png} 
+\end{frame}
+
+
+\begin{frame}[noframenumbering]{Spectral Analysis: 5-modes Case}
+    \centering
+    
+    % Soluzione esatta completa e Setup (fusi in un blocco compatto)
+    {\tiny $u(x,y,0) = 0.2s_{11} + 0.15s_{21} + 0.1s_{12} + 0.08s_{22} + 0.05s_{31} \quad [s_{nm} = \sin(n\pi x)\sin(m\pi y)]$} \\
+    {\scriptsize \textbf{Solution:} $u = \sum A_{nm} \cos(\omega_{nm} t) \sin(n\pi x) \sin(m\pi y)$, \qquad \textbf{Setup:} $\Delta t = 0.15$s, $P(0.25, 0.25)$}.
+    
+    \vspace{0.1cm}
+    
+    \includegraphics[width=0.95\textwidth, height=0.55\textheight, keepaspectratio]{images/sinc_5.png} 
+    
+    \vspace{0.2cm}
+    
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \footnotesize 
+        \textbf{Conservative (CN / Newmark)}
+        \begin{itemize}\itemsep2pt 
+            \item \textbf{Full Spectrum:} All harmonics preserved.
+            \item \textbf{Dispersion:} Error $2.9\% \to 3.8\%$.
+        \end{itemize}
+        
+        \column{0.48\textwidth}
+        \footnotesize
+        \textbf{Dissipative (Backward Euler)}
+        \begin{itemize}\itemsep2pt
+            \item \textbf{Numerical LPF:} High modes obliterated.
+            \item \textbf{Decay:} Amplitude collapse $>95\%$.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[noframenumbering]{Spectral Analysis: 5-modes Case}
+    \centering
+    
+    % Intestazione minimalista
+    {\scriptsize \textbf{Solution:} $u = \sum A_{nm} \cos(\omega_{nm} t) \sin(n\pi x) \sin(m\pi y)$ \quad $\bullet$ \quad \textbf{Setup:} $\Delta t = 0.15$s, $P(0.25, 0.25)$}
+    
+    \vspace{0.2cm}
+    
+    \includegraphics[width=0.95\textwidth, height=0.55\textheight, keepaspectratio]{images/sinc_5.png} 
+    
+    \vspace{0.3cm}
+    
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \footnotesize 
+        \textbf{Conservative (CN, Newmark)}
+        \begin{itemize}\itemsep2pt 
+            \item Energy preserved across all modes.
+            \item Frequency error: $2.9\% \to 3.8\%$ (dispersion).
+        \end{itemize}
+        
+        \column{0.48\textwidth}
+        \footnotesize
+        \textbf{Dissipative (Backward Euler)}
+        \begin{itemize}\itemsep2pt
+            \item Numerical LPF: higher modes obliterated.
+            \item Amplitude collapse ($>95\%$).
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+
+\begin{frame}[noframenumbering]{Scalability 32}
+    \centering
+    \includegraphics[width=\textwidth]{images/scalability_strong_scaling_32.png}
 \end{frame}
 
 
